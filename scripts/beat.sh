@@ -18,6 +18,7 @@ TODAY="$(date -u '+%Y-%m-%d')"
 ONLY="${1:-}"
 
 vt_lock beat || exit 0
+vt_brain_drain          # retry anything a locked brain refused last window
 
 wrote_any=0
 for r in $(vt_resources); do

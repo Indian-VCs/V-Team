@@ -22,10 +22,17 @@ The team is virtual. The work isn't.
 Everything else runs on a schedule:
 
 ```
+./scripts/setup-brain.sh --mcp           # the V-Team's own brain, one store per resource
 ./scripts/install-schedule.sh            # install the launchd routines
 ./scripts/install-schedule.sh --status   # are they loaded, when did they last run
 VT_DRY=1 ./scripts/beat.sh               # preview the prompts, call nothing
 ```
+
+Each resource has its **own isolated knowledge store** in a brain separate from
+the personal gbrain — `~/.v-team/brain`, registered over MCP as `vteam-brain`.
+Isolation is enforced by the engine, not by policy: a resource physically
+cannot read another's store, which is what keeps the independence rule real.
+See `docs/memory.md`.
 
 | Routine | When | Does |
 |---|---|---|
