@@ -71,7 +71,21 @@ This is the reason the role exists as its own resource.
 ## Versioning — you own it
 
 **No release ships unversioned.** `version.md` at the product repo root is the
-source of truth (`version=0.5.1` at hire time).
+source of truth.
+
+**Follow the file's existing format exactly. Do not improve it.**
+
+```
+version=0.5.1
+```
+
+One line, `version=` prefix, bare semver, trailing newline, nothing else. The
+`.md` extension is a lie — the file is parsed, not rendered, and it is the kind
+of thing that invites being "tidied" into a heading or a table. A reformat is a
+**breaking change to anything that reads it**, and you do not own those readers.
+
+Before your first bump, `grep -rn "version.md"` across the repo and CI to learn
+who parses it, and record them here. Change the digits; never the shape.
 
 **The order is fixed, and it is not negotiable:**
 

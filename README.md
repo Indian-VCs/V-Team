@@ -69,7 +69,7 @@ without changing anything else.
 
 ## The V-Team
 
-**Headcount: 5 resources across 4 departments.** One product staffed
+**Headcount: 6 resources across 5 departments.** One product staffed
 (prism-platform); the other five are dormant and staffed on need.
 
 | Callsign | Resource | Dept | Persona | Altitude | Autonomy |
@@ -78,6 +78,7 @@ without changing anything else.
 | **Heimdall** | `adversarial-reviewer` | Quality | Isolation Hawk | behavior | recommend |
 | **Neo** | `tenant-visibility-tester` | Quality | Admin | behavior | recommend |
 | **Hermione** | `content-auditor` | Content | Fact-Checker | behavior | recommend |
+| **Marshal** | `deployment-engineer` | Deployment | Release Marshal | behavior | recommend *(probation)* |
 | **Samwise** | `implementer` | Engineering | Conventions-First | implementation | PR + merge on green |
 
 Callsigns are for talking about the team. `/assign` routes on the functional
@@ -87,8 +88,8 @@ does not.
 Each name encodes the job. **Heimdall** watches the boundary between realms —
 tenant isolation. **Neo** checks what actually renders against what the config
 claims. **Hermione** opens the source before the copy. **Samwise** is
-dependable and never improvises. **Alfred** holds the whole picture and none of
-the authority.
+dependable and never improvises. **Marshal** walks the checklist and holds the
+release. **Alfred** holds the whole picture and none of the authority.
 
 ### Department sizes
 
@@ -97,10 +98,18 @@ the authority.
 | Quality | **2** | does it break, and can a member see it |
 | Architecture | **1** | should this exist |
 | Content | **1** | is it factually true |
+| Deployment | **1** | does it ship, versioned, and can it come back |
 | Engineering | **1** | build it |
 
 Quality is the largest deliberately. Verification is the one shape where
 multi-agent measurably beats a single agent; generation is not.
+
+Deployment is separate from Engineering because of the **credential
+boundary**, not the workload: deploys act as the `indianvcs` identity while
+every other resource authors as `mano@indianvcs.com`. One resource holding both
+is how a feature commit ends up wearing the deploy identity. Marshal also owns
+`version.md` — no release ships unversioned, and the bump lands **after** merge
+and **before** deploy, as its own `release/<version>` PR.
 
 ### Org structure
 
@@ -114,6 +123,7 @@ flowchart TD
     HEIMDALL["<b>Heimdall</b><br/>adversarial-reviewer"]
     NEO["<b>Neo</b><br/>tenant-visibility-tester"]
     HERMIONE["<b>Hermione</b><br/>content-auditor"]
+    MARSHAL["<b>Marshal</b> · deployment-engineer<br/>Deployment<br/><i>recommend · probation</i>"]
     SAMWISE["<b>Samwise</b> · implementer<br/>Engineering<br/><i>merge on green</i>"]
 
     CTO --> ROUTER
@@ -121,6 +131,7 @@ flowchart TD
     ROUTER --> HEIMDALL
     ROUTER --> NEO
     ROUTER --> HERMIONE
+    ROUTER --> MARSHAL
     ROUTER --> SAMWISE
 
     SAMWISE -. escalates .-> HEIMDALL
@@ -128,6 +139,7 @@ flowchart TD
     HEIMDALL -. escalates .-> ALFRED
     NEO -. escalates .-> ALFRED
     HERMIONE -. escalates .-> ALFRED
+    MARSHAL -. escalates .-> ALFRED
     ALFRED -. recommends .-> CTO
 
     subgraph QUALITY [" Quality · 2 "]
@@ -136,6 +148,9 @@ flowchart TD
     end
     subgraph CONTENT [" Content · 1 "]
         HERMIONE
+    end
+    subgraph DEPLOY [" Deployment · 1 "]
+        MARSHAL
     end
 ```
 
