@@ -92,6 +92,45 @@ vt_model() {
   fi
 }
 
+# --- memory ------------------------------------------------------------------
+# Each resource reads and writes its OWN isolated gbrain source. Never another
+# resource's — that is what keeps the independence rule real (docs/memory.md).
+export VT_BRAIN_HOME="${VT_BRAIN_HOME:-$HOME/.v-team/brain}"
+
+vt_brain() {                                  # $1 = source (callsign), rest = gbrain args
+  local src="$1"; shift
+  GBRAIN_HOME="$VT_BRAIN_HOME" GBRAIN_SOURCE="$src" gbrain "$@" 2>&1 | grep -v UPGRADE_AVAILABLE
+}
+
+# PGLite is SINGLE-WRITER: while `gbrain serve` holds the brain for MCP, a CLI
+# write is refused. Spool instead of losing the write, and surface it — a
+# scheduled job that fails silently is worse than one that never ran.
+vt_brain_put() {                              # $1 = source, $2 = slug, content on stdin
+  local src="$1" slug="$2" body spool
+  body="$(cat)"
+  if printf '%s' "$body" | GBRAIN_HOME="$VT_BRAIN_HOME" GBRAIN_SOURCE="$src" \
+       gbrain put "$slug" >/dev/null 2>&1; then
+    return 0
+  fi
+  spool="$VT_STATE/spool/$src"; mkdir -p "$spool"
+  printf '%s' "$body" > "$spool/$slug.md"
+  vt_log "brain locked — spooled $src/$slug (retries next window)"
+  return 1
+}
+
+# Drain anything a previous run could not write.
+vt_brain_drain() {
+  local d="$VT_STATE/spool"; [[ -d "$d" ]] || return 0
+  local f src slug
+  for f in "$d"/*/*.md; do
+    [[ -e "$f" ]] || continue
+    src="$(basename "$(dirname "$f")")"; slug="$(basename "$f" .md)"
+    if GBRAIN_HOME="$VT_BRAIN_HOME" GBRAIN_SOURCE="$src" gbrain put "$slug" < "$f" >/dev/null 2>&1; then
+      rm -f "$f"; vt_log "drained $src/$slug"
+    fi
+  done
+}
+
 # --- daily journal -----------------------------------------------------------
 vt_journal() {                                # append one line to today's journal
   local f="$VT_ROOT/ledger/reports/daily/$(date -u '+%Y-%m-%d').md"
