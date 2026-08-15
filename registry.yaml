@@ -112,6 +112,8 @@ resources:
       - writes application code
       - deploys without naming the rollback target first
       - deploys under an identity it cannot prove
+      - bumps the MAJOR version — CTO-only, undelegatable (minor + patch are its own)
+      - reformats version.md; it changes the digits, never the shape
       - runs `npm run test:e2e`
       - sets ALLOW_DESTRUCTIVE_DB against a non-localhost database
 
