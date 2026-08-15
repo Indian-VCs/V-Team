@@ -74,26 +74,37 @@ without changing anything else.
 
 | Callsign | Resource | Dept | Persona | Altitude | Autonomy |
 |---|---|---|---|---|---|
-| **Alfred** | `architect` | Architecture | — | product | recommend |
-| **Janus** | `roster-steward` | Team | Evidence Clerk | product | recommend *(probation)* |
+| **Jarvis** | `architect` | Architecture | — | product | recommend |
+| **Anubis** | `roster-steward` | Team | Evidence Clerk | product | recommend *(probation)* |
 | **Heimdall** | `adversarial-reviewer` | Quality | Isolation Hawk | behavior | recommend |
-| **Neo** | `tenant-visibility-tester` | Quality | Admin | behavior | recommend |
-| **Hermione** | `content-auditor` | Content | Fact-Checker | behavior | recommend |
-| **Ariadne** | `design-reviewer` | Design | Wayfinder | behavior | recommend *(probation)* |
-| **Marshal** | `deployment-engineer` | Deployment | Release Marshal | behavior | recommend *(probation)* |
+| **Argus** | `tenant-visibility-tester` | Quality | Admin | behavior | recommend |
+| **Mimir** | `content-auditor` | Content | Fact-Checker | behavior | recommend |
+| **Bagheera** | `design-reviewer` | Design | Wayfinder | behavior | recommend *(probation)* |
+| **Cerberus** | `deployment-engineer` | Deployment | Release Marshal | behavior | recommend *(probation)* |
 | **Samwise** | `implementer` | Engineering | Conventions-First | implementation | PR + merge on green |
 
 Callsigns are for talking about the team. `/assign` routes on the functional
-id, because "who covers content auditing" has an answer and "who is Hermione"
+id, because "who covers content auditing" has an answer and "who is Mimir"
 does not.
 
-Each name encodes the job. **Heimdall** watches the boundary between realms —
-tenant isolation. **Neo** checks what actually renders against what the config
-claims. **Hermione** opens the source before the copy. **Samwise** is
-dependable and never improvises. **Ariadne** hands you the thread out of the
-labyrinth. **Marshal** walks the checklist and holds the release. **Alfred**
-holds the whole picture and none of the authority. **Janus** is the door — one
-face on who comes in, one on who goes out.
+**A callsign is a character, that character is not human, and the name encodes
+the job** — CTO rule, 2026-08-16. The one-clause justification is the test: a
+name nobody can defend in a clause is a name that means nothing.
+
+**Heimdall** watches the boundary between realms — tenant isolation. **Argus**
+has a hundred eyes and believes only what they actually see, never what the
+config claims. **Mimir** guards the well the truth comes from: you drink at the
+source or not at all. **Samwise** is dependable and never improvises.
+**Bagheera** knows every path through the jungle and shows you the one you can
+actually take. **Cerberus** stands at the gate — nothing ships past it
+unchecked, and nothing comes back except through it. **Jarvis** sees every
+system at once and gives orders to no one. **Anubis** weighs each one against
+the standard and hands the verdict to someone else to pass.
+
+Six of these were renamed on 2026-08-16. The old callsigns survive in commit
+trailers and merged ledger entries, which are never rewritten — the mapping is
+in `ledger/gaps/2026-08-16-dispatch-has-no-owner.md` and is what makes a commit
+reading `Cerberus` resolvable.
 
 ### Department sizes
 
@@ -113,7 +124,7 @@ multi-agent measurably beats a single agent; generation is not.
 Deployment is separate from Engineering because of the **credential
 boundary**, not the workload: deploys act as the `indianvcs` identity while
 every other resource authors as `mano@indianvcs.com`. One resource holding both
-is how a feature commit ends up wearing the deploy identity. Marshal also owns
+is how a feature commit ends up wearing the deploy identity. Cerberus also owns
 `version.md` — no release ships unversioned, and the bump lands **after** merge
 and **before** deploy, as its own `release/<version>` PR.
 
@@ -124,47 +135,48 @@ flowchart TD
     CTO["👤 CTO — Dhayan<br/><i>decides · sole approver</i>"]
     ROUTER(["/assign — router<br/><i>the only dispatcher</i>"])
 
-    ALFRED["<b>Alfred</b> · architect<br/>Architecture<br/><i>product altitude · recommend-only</i>"]
-    JANUS["<b>Janus</b> · roster-steward<br/>Team<br/><i>product altitude · recommend · probation</i>"]
+    JARVIS["<b>Jarvis</b> · architect<br/>Architecture<br/><i>product altitude · recommend-only</i>"]
+    ANUBIS["<b>Anubis</b> · roster-steward<br/>Team<br/><i>product altitude · recommend · probation</i>"]
 
     HEIMDALL["<b>Heimdall</b><br/>adversarial-reviewer"]
-    NEO["<b>Neo</b><br/>tenant-visibility-tester"]
-    HERMIONE["<b>Hermione</b><br/>content-auditor"]
-    ARIADNE["<b>Ariadne</b> · design-reviewer<br/>Design<br/><i>recommend · probation</i>"]
-    MARSHAL["<b>Marshal</b> · deployment-engineer<br/>Deployment<br/><i>recommend · probation</i>"]
+    ARGUS["<b>Argus</b><br/>tenant-visibility-tester"]
+    MIMIR["<b>Mimir</b><br/>content-auditor"]
+    BAGHEERA["<b>Bagheera</b> · design-reviewer<br/>Design<br/><i>recommend · probation</i>"]
+    CERBERUS["<b>Cerberus</b> · deployment-engineer<br/>Deployment<br/><i>recommend · probation</i>"]
     SAMWISE["<b>Samwise</b> · implementer<br/>Engineering<br/><i>merge on green</i>"]
 
     CTO --> ROUTER
-    ROUTER --> ALFRED
-    ROUTER --> JANUS
+    ROUTER --> JARVIS
+    ROUTER --> ANUBIS
     ROUTER --> HEIMDALL
-    ROUTER --> NEO
-    ROUTER --> HERMIONE
-    ROUTER --> ARIADNE
-    ROUTER --> MARSHAL
+    ROUTER --> ARGUS
+    ROUTER --> MIMIR
+    ROUTER --> BAGHEERA
+    ROUTER --> CERBERUS
     ROUTER --> SAMWISE
 
     SAMWISE -. escalates .-> HEIMDALL
-    SAMWISE -. escalates .-> NEO
-    HEIMDALL -. escalates .-> ALFRED
-    NEO -. escalates .-> ALFRED
-    HERMIONE -. escalates .-> ALFRED
-    MARSHAL -. escalates .-> ALFRED
-    ALFRED -. recommends .-> CTO
-    JANUS -. recommends .-> CTO
+    SAMWISE -. escalates .-> ARGUS
+    HEIMDALL -. escalates .-> JARVIS
+    ARGUS -. escalates .-> JARVIS
+    MIMIR -. escalates .-> JARVIS
+    CERBERUS -. escalates .-> JARVIS
+    BAGHEERA -. escalates .-> JARVIS
+    JARVIS -. recommends .-> CTO
+    ANUBIS -. recommends .-> CTO
 
     subgraph QUALITY [" Quality · 2 "]
         HEIMDALL
-        NEO
+        ARGUS
     end
     subgraph CONTENT [" Content · 1 "]
-        HERMIONE
+        MIMIR
     end
     subgraph DESIGN [" Design · 1 "]
-        ARIADNE
+        BAGHEERA
     end
     subgraph DEPLOY [" Deployment · 1 "]
-        MARSHAL
+        CERBERUS
     end
 ```
 
@@ -173,16 +185,26 @@ run graph. Dotted lines are **escalation**, which travels one way only:
 implementation → behavior → product → CTO. Nothing escalates downward or
 sideways, and an escalation is a handoff with a verdict, never a negotiation.
 
-**Alfred and Janus are both product altitude and both terminal**, on different
-objects: Alfred answers whether a *product* change should exist, Janus whether a
-*resource* should. Neither decides — both hand the CTO a recommendation. Janus
+**Jarvis and Anubis are both product altitude and both terminal**, on different
+objects: Jarvis answers whether a *product* change should exist, Anubis whether a
+*resource* should. Neither decides — both hand the CTO a recommendation. Anubis
 also owns the other direction: `/retire`, and whether anyone has earned a
 promotion off probation.
 
-> The chart's remaining resource-to-resource escalation edges predate this and
-> are flagged for audit — `SAMWISE -. escalates .-> HEIMDALL` points sideways at
-> a reviewer rather than back at the router, which `docs/protocol.md` §3 does not
-> allow. No new resource-to-resource edges are drawn.
+**On the resource-to-resource escalation edges, audited 2026-08-16: the chart
+is right and the flag was wrong.** `SAMWISE -. escalates .-> HEIMDALL` is
+implementation → behavior, which is one rung **up** the ladder in
+`docs/protocol.md` §3, and `skills/assign` names it explicitly
+("implementation → behavior: resource to resource"). *Sideways* means **same
+altitude** — Heimdall → Argus would be sideways; Samwise → Heimdall is not.
+§3 now says so in those words, so the misreading cannot recur. Neither the
+chart nor §3 was changed on the merits; the incorrect audit note was removed.
+
+The real hole §3 leaves is **who picks the recipient**. An escalating resource
+naming its own receiver is a private dispatch decision the run graph never
+sees. `docs/delegation.md` closes it: the brief declares the escalation target
+up front, and an escalation with no declared target goes to the router, not to
+a resource of the sender's choosing.
 
 The tree of work is data (`ledger/runs/`), not a spawn chain. Resources
 decompose and hand back plans; they never spawn each other.

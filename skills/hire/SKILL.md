@@ -91,6 +91,31 @@ different things.
 | **beat** | a domain + source set + standing question. Cadence follows the beat's real publish rate, capped at 5 items/day |
 | **surfaces** | the files or systems it may touch. Be specific — this is how file conflicts get avoided |
 | **never** | the hard rules. Include anything destructive it must not run |
+| **callsign** | a **character**, and that character is **not human**, and the name **encodes the job** |
+
+### The callsign rule (CTO, 2026-08-16)
+
+A callsign is a **character**, that character is **not human**, and the name
+**encodes the job** well enough to defend in one clause. A robot, creature,
+god, AI or mythic non-person qualifies; a human hero with an unusual name does
+not, and neither does a job title (`Marshal`) or a name that merely sounds
+exotic. Reference clause, from the README: *"Heimdall watches the boundary
+between realms."*
+
+**Write the one-clause justification into the README's name-encoding paragraph
+in the same PR.** That paragraph is the test — a name nobody can justify in a
+clause is a name that means nothing, and the paragraph is where the argument
+has to be made in public.
+
+**A callsign is permanent the moment it lands in a commit.** It goes into the
+`V-Team-Resource` trailer and into merged `ledger/` entries, neither of which
+is ever rewritten. Six callsigns had to be renamed on 2026-08-16 and the old
+names are still in the record — see
+`ledger/gaps/2026-08-16-dispatch-has-no-owner.md` for the mapping. Get it right
+at draft time; `roster-steward` is the last check, not the first.
+
+The brain source id follows the callsign (`docs/memory.md`), so a rename
+orphans a store. One more reason not to need one.
 
 ## Probation
 
@@ -110,4 +135,13 @@ drifting performance is gradual, on the same evidence logic as promotion.
    beat, surfaces, never.
 3. Remove the corresponding entry from `known_gaps`.
 4. Put the unpicked persona variants in `personas/`.
-5. Open a PR. A hire is a reviewable diff, not a silent addition.
+5. Add the callsign's one-clause justification to the README name-encoding
+   paragraph, and the resource to the README roster table, department table and
+   org chart. `validate.sh` fails without the roster row.
+6. Add the `ledger/gaps/` entry recording **every** check above and its answer,
+   including the ones that failed. `validate.sh` fails a hire PR without one.
+7. Create the resource's isolated brain source and run `./scripts/orient.sh`.
+   `setup-brain.sh` derives sources from `registry.yaml`, so running it is the
+   whole step — but run it, or the hire writes its orientation notes into the
+   shared `default` store and the isolation guarantee is gone for everyone.
+8. Open a PR. A hire is a reviewable diff, not a silent addition.

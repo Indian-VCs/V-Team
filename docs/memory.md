@@ -39,16 +39,34 @@ knowledge — accumulated situational memory of *this* system.
 
 ```
 default    federated   the TEAM store — every resource searches it
-hermione   isolated    content-auditor
-neo        isolated    tenant-visibility-tester
+mimir      isolated    content-auditor
+argus      isolated    tenant-visibility-tester
 heimdall   isolated    adversarial-reviewer
 samwise    isolated    implementer
-alfred     isolated    architect
+jarvis     isolated    architect
+bagheera   isolated    design-reviewer
+cerberus   isolated    deployment-engineer
+anubis     isolated    roster-steward
 ```
 
 An **isolated** gbrain source is only searched when explicitly named via
 `--source`. So a resource physically cannot see another's store during normal
 operation.
+
+**This list is derived from `registry.yaml`, not maintained by hand.** It was
+hand-maintained until 2026-08-16 and the guarantee above was false for three
+months' worth of hires: a gbrain write to a source that does not exist does not
+fail, it lands in `default` — which is *federated*, so every resource can read
+it. `setup-brain.sh` now derives the store list from the registry's callsigns,
+`vt_brain_ensure_source()` creates the store before any write and spools rather
+than falling through to `default`, and `validate.sh` 4g fails when a registered
+resource has no store. See
+`ledger/escapes/2026-08-16-hire-path-no-brain-source.md`.
+
+**A store id is a callsign, so renaming a callsign orphans a store.** The
+2026-08-16 rename migrated `alfred`→`jarvis`, `hermione`→`mimir`, `neo`→`argus`
+page by page; the old ids still exist holding duplicate copies and want a
+`gbrain sources remove --confirm-destructive` once the copies are confirmed.
 
 That matters because private memory would otherwise **break the independence
 rule**. If Heimdall's notebook said "the last reviewer flagged X here," that is
@@ -164,7 +182,7 @@ the server connected, `gbrain serve` holds the PGLite lock continuously, and
 **every scheduled CLI write spools instead of landing** — confirmed:
 
 ```
-brain locked — spooled hermione/record (retries next window)
+brain locked — spooled mimir/record (retries next window)
 ```
 
 `GBRAIN_NO_RETRY_CONNECT=1` is set on every CLI call so a locked brain fails
