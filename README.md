@@ -19,8 +19,32 @@ The team is virtual. The work isn't.
 /retire  <resource>               # removes one — team size has a measured cost
 ```
 
-Everything else runs on a schedule: daily learning (capped, proposals only)
-and a weekly report to the CTO.
+Everything else runs on a schedule:
+
+```
+./scripts/install-schedule.sh            # install the launchd routines
+./scripts/install-schedule.sh --status   # are they loaded, when did they last run
+VT_DRY=1 ./scripts/beat.sh               # preview the prompts, call nothing
+```
+
+| Routine | When | Does |
+|---|---|---|
+| `beat.sh` | every 6h (00/06/12/18) | reads each beat, writes **proposals** to `ledger/learnings/`. Never touches a rule file. |
+| `weekly.sh` | Mondays 08:00 | metrics from git + Actions, then the CTO report |
+
+**launchd, not cron** — `StartCalendarInterval` runs a missed job once on wake,
+so a closed laptop delays a run instead of losing it. The beat then picks its
+mode from the gap: `normal` · `catch-up` · `backfill` · `cold-start`. The cap of
+5 items/day is **per run, never per missed day** — returning after two weeks
+produces one good digest, not seventy stale ones.
+
+Metrics are gathered deterministically; the model only writes narrative. If it
+is unavailable the report still lands with its numbers intact, and the failure
+shows up in the **Liveness** section rather than vanishing.
+
+`VT_MODEL_CMD` points the routines at any model. Defaults to the Claude Code
+CLI; set it to a gateway script to move batch work off your interactive quota
+without changing anything else.
 
 ## What's here
 
@@ -38,13 +62,83 @@ and a weekly report to the CTO.
 
 ## The V-Team
 
-| Resource | Persona | Altitude | Autonomy |
-|---|---|---|---|
-| `content-auditor` | Fact-Checker | behavior | recommend |
-| `tenant-visibility-tester` | Admin | behavior | recommend |
-| `adversarial-reviewer` | Isolation Hawk | behavior | recommend |
-| `implementer` | Conventions-First | implementation | PR + merge on green |
-| `architect` | — | product | recommend |
+**Headcount: 5 resources across 4 departments.** One product staffed
+(prism-platform); the other five are dormant and staffed on need.
+
+| Callsign | Resource | Dept | Persona | Altitude | Autonomy |
+|---|---|---|---|---|---|
+| **Alfred** | `architect` | Architecture | — | product | recommend |
+| **Heimdall** | `adversarial-reviewer` | Quality | Isolation Hawk | behavior | recommend |
+| **Neo** | `tenant-visibility-tester` | Quality | Admin | behavior | recommend |
+| **Hermione** | `content-auditor` | Content | Fact-Checker | behavior | recommend |
+| **Samwise** | `implementer` | Engineering | Conventions-First | implementation | PR + merge on green |
+
+Callsigns are for talking about the team. `/assign` routes on the functional
+id, because "who covers content auditing" has an answer and "who is Hermione"
+does not.
+
+Each name encodes the job. **Heimdall** watches the boundary between realms —
+tenant isolation. **Neo** checks what actually renders against what the config
+claims. **Hermione** opens the source before the copy. **Samwise** is
+dependable and never improvises. **Alfred** holds the whole picture and none of
+the authority.
+
+### Department sizes
+
+| Dept | Size | Owns |
+|---|---|---|
+| Quality | **2** | does it break, and can a member see it |
+| Architecture | **1** | should this exist |
+| Content | **1** | is it factually true |
+| Engineering | **1** | build it |
+
+Quality is the largest deliberately. Verification is the one shape where
+multi-agent measurably beats a single agent; generation is not.
+
+### Org structure
+
+```mermaid
+flowchart TD
+    CTO["👤 CTO — Dhayan<br/><i>decides · sole approver</i>"]
+    ROUTER(["/assign — router<br/><i>the only dispatcher</i>"])
+
+    ALFRED["<b>Alfred</b> · architect<br/>Architecture<br/><i>product altitude · recommend-only</i>"]
+
+    HEIMDALL["<b>Heimdall</b><br/>adversarial-reviewer"]
+    NEO["<b>Neo</b><br/>tenant-visibility-tester"]
+    HERMIONE["<b>Hermione</b><br/>content-auditor"]
+    SAMWISE["<b>Samwise</b> · implementer<br/>Engineering<br/><i>merge on green</i>"]
+
+    CTO --> ROUTER
+    ROUTER --> ALFRED
+    ROUTER --> HEIMDALL
+    ROUTER --> NEO
+    ROUTER --> HERMIONE
+    ROUTER --> SAMWISE
+
+    SAMWISE -. escalates .-> HEIMDALL
+    SAMWISE -. escalates .-> NEO
+    HEIMDALL -. escalates .-> ALFRED
+    NEO -. escalates .-> ALFRED
+    HERMIONE -. escalates .-> ALFRED
+    ALFRED -. recommends .-> CTO
+
+    subgraph QUALITY [" Quality · 2 "]
+        HEIMDALL
+        NEO
+    end
+    subgraph CONTENT [" Content · 1 "]
+        HERMIONE
+    end
+```
+
+Solid lines are **dispatch** — only the router does it, and it holds the whole
+run graph. Dotted lines are **escalation**, which travels one way only:
+implementation → behavior → product → CTO. Nothing escalates downward or
+sideways, and an escalation is a handoff with a verdict, never a negotiation.
+
+The tree of work is data (`ledger/runs/`), not a spawn chain. Resources
+decompose and hand back plans; they never spawn each other.
 
 ## The three ideas it runs on
 

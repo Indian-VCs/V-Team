@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  V-Team beat runner — every 6 hours.
+
+  StartCalendarInterval (not StartInterval) because launchd runs a MISSED
+  calendar job once on wake. A closed laptop delays the run; it does not skip
+  it. The script's gap detector then picks catch-up or backfill mode.
+
+  Four windows share ONE daily cap of 5 items per resource, so the later
+  windows are genuine no-ops once the budget is spent.
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>so.indianvcs.vteam.beat</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>__VT_ROOT__/scripts/beat.sh</string>
+  </array>
+
+  <key>StartCalendarInterval</key>
+  <array>
+    <dict><key>Hour</key><integer>0</integer><key>Minute</key><integer>0</integer></dict>
+    <dict><key>Hour</key><integer>6</integer><key>Minute</key><integer>0</integer></dict>
+    <dict><key>Hour</key><integer>12</integer><key>Minute</key><integer>0</integer></dict>
+    <dict><key>Hour</key><integer>18</integer><key>Minute</key><integer>0</integer></dict>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string>__VT_ROOT__</string>
+
+  <key>StandardOutPath</key>
+  <string>/tmp/vteam-beat.out</string>
+  <key>StandardErrorPath</key>
+  <string>/tmp/vteam-beat.err</string>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+  </dict>
+
+  <!-- Never at login: a laptop opened after a week should hit the schedule's
+       backfill path once, not fire an extra run on every boot. -->
+  <key>RunAtLoad</key>
+  <false/>
+</dict>
+</plist>
