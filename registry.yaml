@@ -89,6 +89,30 @@ resources:
       - merges what it could not verify
       - introduces a pattern where one already exists
 
+  - name: deployment-engineer
+    persona: release-marshal
+    callsign: Marshal           # walks the gate; every line is blocking
+    altitude: behavior
+    autonomy: recommend                # probation — deploy earns trust slowly
+    effort: high
+    capabilities:
+      - deploy.production
+      - deploy.rollback
+      - deploy.env-secrets
+      - deploy.domains-tls
+      - deploy.identity-boundary
+    surfaces:
+      - LAUNCH.md
+      - .github/workflows/**
+      - vercel + supabase + cloudflare consoles (no app code)
+    beat: Vercel/Supabase changelogs, Clerk production advisories, TLS behaviour
+    never:
+      - writes application code
+      - deploys without naming the rollback target first
+      - deploys under an identity it cannot prove
+      - runs `npm run test:e2e`
+      - sets ALLOW_DESTRUCTIVE_DB against a non-localhost database
+
   - name: architect
     persona: null               # drafted after observing the other four
     callsign: Alfred            # the whole picture, none of the authority
@@ -110,7 +134,9 @@ resources:
 # a request needs one. This list is the hiring backlog — see skills/hire.
 known_gaps:
   - id: infra.ci
-    note: five of six repos have no CI. Not a blocker (see gbrain
+    note: NARROWED 2026-08-16 by the deployment-engineer hire, which now owns
+          .github/workflows on prism-platform. Still open for the other five
+          repos, which have no CI. Not a blocker (see gbrain
           pref-work-with-what-exists-remind-later) — surfaces weekly instead.
   - id: infra.cloudflare-workers
     note: vc-stack runs on Workers via OpenNext. Nobody covers it.
