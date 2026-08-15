@@ -33,10 +33,24 @@ Same headline number, three different Mondays.
 
 **Unmeasured never renders as healthy.** Five of six repos have no CI. A row
 showing zero escapes in vc-stack would be reporting that nothing is watching it
-— as good news. Those rows say **not measured**, every week, until CI exists.
-A false clean bill of health is worse than a blank. This is also the sanctioned
-reminder channel for gate gaps (gbrain
-`pref-work-with-what-exists-remind-later`).
+— as good news. Those rows say **not measured**, never zero. A false clean bill
+of health is worse than a blank. This is also the sanctioned reminder channel
+for gate gaps (gbrain `pref-work-with-what-exists-remind-later`).
+
+**But distinguish `dormant` from `not measured`.** The baseline found all five
+ungated repos at **zero commits in four weeks**. An ungated repo nobody is
+committing to is a far smaller exposure than an ungated repo under active
+development, and reporting it as unmonitored risk every week is noise — which
+is how a report stops being read.
+
+| Repo state | Renders as |
+|---|---|
+| no gate, commits in the window | **not measured** — real exposure, surface it |
+| no gate, zero commits | **dormant** — one line, no alarm |
+| gate present | measured normally |
+
+A dormant repo that receives a commit flips back to `not measured` in that
+week's report automatically.
 
 **"Waiting on you" items carry defaults.** The CTO should be able to say
 nothing and have the sensible thing happen.
