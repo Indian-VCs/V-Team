@@ -88,56 +88,75 @@ goes in the brief as a fact — not as a pointer to where it was said.
 Every unit of work has exactly **one** accountable resource. Never two, never
 zero. Two accountables means nobody is. See `dashboard.md`.
 
-## 7. Every commit says who did it
+## 7. A resource commit says which resource made it
 
-Any commit a resource authors carries an attribution trailer:
+**The CTO's hand commits carry nothing extra.** A commit a resource makes
+carries a GitHub-native co-author trailer naming the resource, plus the run id
+that ties it to the ledger:
 
 ```
 Name the ungrouped spaces shelf "Other"
 
-V-Team-Resource: implementer (Samwise)
+Co-authored-by: Samwise <samwise@indianvcs.com>
 V-Team-Run: 2026-08-16-resources-panel-other-group
-V-Team-Node: L0.2
 ```
 
-`V-Team-Resource` is mandatory and names the **functional id**, with the
-callsign in parentheses. `V-Team-Run` and `V-Team-Node` are required whenever
-the work came from a dispatch, so a commit joins back to `ledger/runs/`.
+The format is GitHub's, exactly — `Co-authored-by: Name <email>`, in the
+trailer block after a blank line, one line per co-author. GitHub silently
+ignores a line it cannot parse, so a malformed trailer yields a commit that
+looks attributed and credits nobody. `V-Team-Run` is required on any commit
+that carries a co-author, because that is what joins the commit back to a
+`ledger/runs/` file the worker does not write.
+
+**Never a co-author naming Claude, Anthropic, or any model.** Resource
+callsigns only. This is enforced, not trusted.
 
 **Trailers, not a subject prefix**, because trailers are queryable:
 
 ```sh
-git log --format='%(trailers:key=V-Team-Resource)' --since=1.month | sort | uniq -c
+git log --format='%(trailers:key=Co-authored-by)' --since=1.month | sort | uniq -c
 git log --format='%H %(trailers:key=V-Team-Run)' -- src/lib/data/
 ```
 
-That makes "what did this resource touch" and "which commits belong to that
-run" answerable from git, which matters because `record.sh` must derive a
-resource's track record from artifacts the resource **cannot write about
-itself**. A trailer written at commit time by the worker is still self-report;
-what makes it evidence is that CI refuses the commit without it, and that the
-run/node values have to match a ledger file nobody edits after the fact.
+**Enforcement is a guard, not a habit** (`skills/hire` step 3):
 
-**Enforcement is a guard, not a habit** (`skills/hire` step 3: prefer a
-deterministic check to a resource every time):
-
-- `.githooks/commit-msg` — rejects a commit with no `V-Team-Resource` trailer.
-  Convenience only; hooks are not shared by git and are trivially skipped with
-  `--no-verify`.
-- `.github/workflows/attribution.yml` — fails a PR when any commit in its range
-  lacks the trailer. This is the actual guarantee, and it mirrors the existing
+- `.githooks/commit-msg` — refuses a wrong co-author locally. Convenience
+  only; hooks are not shared by git and are skipped with `--no-verify`.
+- `.github/workflows/attribution.yml` — fails a PR when a co-author is
+  malformed, names a model, or lacks a run id. It mirrors the existing
   `agents-sync` check.
 
-**A human commit is not a resource commit.** The CTO committing by hand does
-not need the trailer; the guard checks commits on resource branches, and a
-human-authored commit is exempt by author identity, never by an opt-out flag.
+**What this cannot enforce, stated so nobody mistakes green for proof.**
+Because a hand commit carries nothing, a resource that omits the trailer is
+indistinguishable from the CTO committing by hand, and passes. Absence of a
+trailer stopped being evidence the moment "carries nothing" became the human
+signal. Closing that needs evidence from outside the commit: `record.sh`
+reconciling `ledger/runs/` — written by the router, not the worker — against
+the commits that actually landed on the branch a dispatch produced. Until
+that exists, attribution is reliable for commits that claim it and silent
+about commits that do not.
 
-**Deploy identity is separate from attribution.** The trailer says *who did the
-work*; the commit author says *which credential acted*. Every resource except
-`deployment-engineer` authors as `mano@indianvcs.com`; deploys act as the
-`indianvcs` identity. Never mutate a shared global git config to switch — that
-silently re-attributes another resource's commits. Set it explicitly per
-invocation.
+**Dropped from the previous revision, and why.** `V-Team-Resource:` is gone,
+replaced by `Co-authored-by:` — one trailer, GitHub-native, and it renders on
+the commit instead of being invisible outside a `git log` format string. The
+author-identity exemption is gone with it: telling a hand commit from a
+resource commit no longer needs author identity, so the exempt list it
+required was dead weight. `V-Team-Node:` is gone — the node is derivable from
+the run file, and every additional mandatory field is another thing to get
+wrong for no gain in what can be reconstructed. `V-Team-Run:` stays, and is
+now enforced rather than merely expected, because it is the only field that
+points at an artifact the resource cannot author.
+
+**Deploy identity is separate from attribution.** The trailer says *who did
+the work*; the commit author says *which credential acted*, and on this
+project it says more than that — Vercel builds a commit only when its author
+maps to a Vercel account with access to the project, and there is exactly one
+such account (`product@indianvcs.com`) because seats are billed per user. So
+commits authored `mano@indianvcs.com` are invisible to the deploy pipeline by
+construction. Only `deployment-engineer` authors as `product@indianvcs.com`,
+and only on the commits that are meant to build. Set it explicitly per
+invocation — never by mutating a shared git config, which silently
+re-attributes every other resource's commits.
 
 ## Provenance
 
