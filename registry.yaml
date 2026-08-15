@@ -1,0 +1,118 @@
+# Resource registry — the skills matrix.
+#
+# The router reads this to answer one question: is there a resource that can
+# do what was asked? If not, it says so and names the missing capability
+# rather than assigning the work to a near-fit.
+#
+# Altitude  = which question the resource may answer
+#             implementation -> behavior -> product
+# Autonomy  = what it may do without approval
+#             recommend | branch | merge-on-green
+# Effort    = selected by TASK DIFFICULTY, not by identity. The value here is
+#             the resource's default; the router overrides it per task.
+#             Difficulty is defined as inverse gate coverage — see
+#             docs/difficulty.md.
+
+version: 1
+scope:
+  products: [prism-platform]           # others staffed on need
+  manager: Dhayan                      # CTO; sole approver
+
+resources:
+  - name: content-auditor
+    persona: fact-checker              # alternates in personas/variants.md
+    altitude: behavior
+    autonomy: recommend
+    effort: default
+    capabilities:
+      - content.audit.factual
+      - content.audit.sourcing
+      - content.audit.voice
+      - content.money-format
+    surfaces:
+      - content/**
+      - src/lib/catalog/**
+    beat: fund disclosures, primary fund sites, comparable directories
+    never:
+      - writes code
+      - passes a figure it could not trace to a source
+
+  - name: tenant-visibility-tester
+    persona: admin
+    altitude: behavior
+    autonomy: recommend
+    effort: default
+    capabilities:
+      - test.tenant-visibility
+      - test.exploratory
+      - test.config-vs-rendered
+    surfaces:
+      - running app only (no repo writes)
+    beat: multi-tenant configuration and feature-flag practice
+    never:
+      - runs `npm run test:e2e`        # manual dispatch, shared Clerk cast
+      - accepts "it's enabled in config" as evidence
+
+  - name: adversarial-reviewer
+    persona: isolation-hawk
+    altitude: behavior
+    autonomy: recommend
+    effort: default                    # -> high on low-gate-coverage surfaces
+    capabilities:
+      - code.review
+      - code.review.tenant-isolation
+      - code.review.auth
+      - code.review.rsc-boundary
+    surfaces:
+      - diffs only
+    beat: multi-tenant isolation failures, Clerk/auth advisories
+    never:
+      - approves; it only refutes or finds nothing
+
+  - name: implementer
+    persona: conventions-first
+    altitude: implementation
+    autonomy: merge-on-green
+    effort: low                        # escalates with task difficulty
+    capabilities:
+      - code.implement
+      - code.refactor
+      - test.unit.author
+    surfaces:
+      - assigned files only, declared per task
+    beat: Next.js / Prisma / TypeScript release notes
+    never:
+      - merges what it could not verify
+      - introduces a pattern where one already exists
+
+  - name: architect
+    persona: null                      # drafted after observing the other four
+    altitude: product
+    autonomy: recommend                # highest altitude, lowest autonomy
+    effort: high
+    capabilities:
+      - product.impact
+      - product.should-this-exist
+      - escalation.terminal              # last stop before the manager
+    surfaces:
+      - reads everything, writes nothing
+    beat: what changes the shape of the product
+    never:
+      - decides
+      - merges
+
+# Capabilities nobody currently covers. The router surfaces these by name when
+# a request needs one. This list is the hiring backlog — see skills/hire.
+known_gaps:
+  - id: infra.ci
+    note: five of six repos have no CI. Not a blocker (see gbrain
+          pref-work-with-what-exists-remind-later) — surfaces weekly instead.
+  - id: infra.cloudflare-workers
+    note: vc-stack runs on Workers via OpenNext. Nobody covers it.
+  - id: security.review
+    note: no resource owns SUPABASE_SERVICE_ROLE_KEY blast radius, public
+          bucket exposure, or the vendor-portal auth surface.
+  - id: design.visual
+    note: /design-review skill exists; no standing resource.
+  - id: data.migration
+    note: additive-only during pilot. High difficulty, no owner.

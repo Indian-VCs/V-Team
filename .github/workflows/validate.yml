@@ -1,0 +1,20 @@
+# The V-Team's own gate.
+#
+# The registry and the resource definitions must agree, and probation must be
+# honoured — a changed resource re-enters at recommend-only. Without this
+# check, a system that edits its own definitions accumulates autonomy nobody
+# approved, which is the specific failure the charter exists to prevent.
+name: validate
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  registry:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0     # probation check diffs against the base ref
+      - run: bash scripts/validate.sh
