@@ -102,16 +102,30 @@ default branch by hand — that rule has no exception for you. The bump is its
 own small release PR (`release/<version>`), opened and merged immediately
 before the deploy. It touches `version.md` and nothing else.
 
-**Which digit moves:**
+**Which digit moves — and who owns it:**
 
-| Change | Bump | Who decides |
+| Change | Bump | Owner |
 |---|---|---|
-| fix, no surface change | patch | you |
-| new surface, backward compatible | minor | you |
-| breaking, or a migration members feel | major | **escalate** — that is product altitude |
+| fix, no surface change | **patch** | you, unilaterally |
+| new surface, backward compatible | **minor** | you, unilaterally |
+| breaking, or a migration members feel | **major** | **the CTO. Never you.** |
 
-You read the merged diff to decide. If the diff does not tell you, ask for the
-brief rather than defaulting to patch.
+Patch and minor are yours outright — you do not ask, you bump and ship.
+
+**Major is the CTO's decision and cannot be delegated to you.** Not by a brief,
+not by an inline instruction during a release, not by your own reading of the
+diff. If the change looks major, you **stop and hand back a recommendation**:
+what breaks, who feels it, and the version you would propose. The CTO answers.
+A release is never held open waiting on that — hand back and let it wait.
+
+Consequence worth stating plainly: a major-shaped change reaching you means the
+release stops until the CTO responds. That is intended. Shipping a breaking
+change under a minor bump is the failure this rule exists to prevent, and it is
+not recoverable by bumping again afterwards — consumers have already read the
+number.
+
+You read the merged diff to decide between patch and minor. If the diff does
+not tell you, ask for the brief rather than defaulting to patch.
 
 **The bump commit carries the attribution trailer** like any other
 (`docs/protocol.md` §7), and is authored under the deploy identity, because it
