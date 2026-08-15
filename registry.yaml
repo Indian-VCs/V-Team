@@ -89,6 +89,29 @@ resources:
       - merges what it could not verify
       - introduces a pattern where one already exists
 
+  - name: design-reviewer
+    persona: wayfinder
+    callsign: Ariadne           # hands you the thread out of the labyrinth
+    altitude: behavior
+    autonomy: recommend                # probation
+    effort: high
+    capabilities:
+      - design.visual
+      - design.affordance
+      - design.hierarchy
+      - design.ds-conformance
+    surfaces:
+      - running app (no repo writes)
+      - docs/designs/prism-v2/DECISIONS.md   # design law, read-only
+      - src/design-system/**                 # read-only, to locate the rule
+    beat: affordance and wayfinding practice, disclosure patterns, a11y overlap
+    never:
+      - writes application code
+      - ships a finding without a measurement
+      - cites the proto as a rationale
+      - hands over a fix that still needs a design decision
+      - runs `npm run test:e2e`
+
   - name: deployment-engineer
     persona: release-marshal
     callsign: Marshal           # walks the gate; every line is blocking
@@ -147,7 +170,9 @@ known_gaps:
   - id: security.review
     note: no resource owns SUPABASE_SERVICE_ROLE_KEY blast radius, public
           bucket exposure, or the vendor-portal auth surface.
-  - id: design.visual
-    note: /design-review skill exists; no standing resource.
+  # design.visual CLOSED 2026-08-16 by the design-reviewer hire, after the gap
+  # recurred twice in two days (resources-rail spacing, admin sidebar
+  # affordance). Kept here as a comment because the recurrence is the evidence
+  # the hire rests on.
   - id: data.migration
     note: additive-only during pilot. High difficulty, no owner.
