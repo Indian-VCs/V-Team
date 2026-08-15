@@ -88,6 +88,57 @@ goes in the brief as a fact — not as a pointer to where it was said.
 Every unit of work has exactly **one** accountable resource. Never two, never
 zero. Two accountables means nobody is. See `dashboard.md`.
 
+## 7. Every commit says who did it
+
+Any commit a resource authors carries an attribution trailer:
+
+```
+Name the ungrouped spaces shelf "Other"
+
+V-Team-Resource: implementer (Samwise)
+V-Team-Run: 2026-08-16-resources-panel-other-group
+V-Team-Node: L0.2
+```
+
+`V-Team-Resource` is mandatory and names the **functional id**, with the
+callsign in parentheses. `V-Team-Run` and `V-Team-Node` are required whenever
+the work came from a dispatch, so a commit joins back to `ledger/runs/`.
+
+**Trailers, not a subject prefix**, because trailers are queryable:
+
+```sh
+git log --format='%(trailers:key=V-Team-Resource)' --since=1.month | sort | uniq -c
+git log --format='%H %(trailers:key=V-Team-Run)' -- src/lib/data/
+```
+
+That makes "what did this resource touch" and "which commits belong to that
+run" answerable from git, which matters because `record.sh` must derive a
+resource's track record from artifacts the resource **cannot write about
+itself**. A trailer written at commit time by the worker is still self-report;
+what makes it evidence is that CI refuses the commit without it, and that the
+run/node values have to match a ledger file nobody edits after the fact.
+
+**Enforcement is a guard, not a habit** (`skills/hire` step 3: prefer a
+deterministic check to a resource every time):
+
+- `.githooks/commit-msg` — rejects a commit with no `V-Team-Resource` trailer.
+  Convenience only; hooks are not shared by git and are trivially skipped with
+  `--no-verify`.
+- `.github/workflows/attribution.yml` — fails a PR when any commit in its range
+  lacks the trailer. This is the actual guarantee, and it mirrors the existing
+  `agents-sync` check.
+
+**A human commit is not a resource commit.** The CTO committing by hand does
+not need the trailer; the guard checks commits on resource branches, and a
+human-authored commit is exempt by author identity, never by an opt-out flag.
+
+**Deploy identity is separate from attribution.** The trailer says *who did the
+work*; the commit author says *which credential acted*. Every resource except
+`deployment-engineer` authors as `mano@indianvcs.com`; deploys act as the
+`indianvcs` identity. Never mutate a shared global git config to switch — that
+silently re-attributes another resource's commits. Set it explicitly per
+invocation.
+
 ## Provenance
 
 - Cemri et al., *Why Do Multi-Agent LLM Systems Fail?* (MAST) — 1,600+
