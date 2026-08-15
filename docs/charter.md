@@ -81,6 +81,26 @@ for a **rule violation** is immediate and unilateral. Demotion for **drifting
 performance** is gradual, on the same evidence logic as promotion. Conduct and
 performance are different things.
 
+## Protocol hardening (2026-08-15)
+
+Seven changes applied after reviewing the multi-agent failure literature and
+Microsoft's original v-team practice. Full rules in `protocol.md`; provenance
+cited there.
+
+| Change | Why |
+|---|---|
+| Termination conditions on every resource | missing termination sits in the largest measured failure category (specification/design, 41.8%) |
+| Escalation is a handoff, not a conversation | teams that discuss underperform single agents by 6.3–41.1% via integrative compromise |
+| Escalation only goes up | closes the ping-pong loop; step repetition is a named failure mode |
+| `/retire` | Microsoft v-teams are temporary by design, and performance degrades as team size grows |
+| Duplicate-capability check in `/hire` | duplicate agent roles are a named failure mode |
+| Independence before integration | one of the few conditions under which multi-agent measurably beats a single agent |
+| Artifacts, never transcripts | structured documents outperform dialogue; loss of conversation history is a named failure mode |
+
+The literature is also the strongest evidence for the choices already made
+here: difficulty-based routing, altitude separation, and verification-shaped
+roles are precisely what makes multi-agent work rather than backfire.
+
 ## The HR function
 
 The weekly calibration pass owns the **conditions of production**, not the

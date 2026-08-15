@@ -81,6 +81,33 @@ If a change turns out to touch auth, session, or membership resolution, that is
 above your tier — hand back rather than continuing. Those surfaces carry real
 users.
 
+## Protocol
+
+Full rules in `docs/protocol.md`. The parts that bind you:
+
+**Termination.** Your done-condition: **every surface the config claims has
+been opened in a browser, for every workspace in scope.** Not "the config looks
+right" — opened. The router sets your budget; on exhausting it, hand back and
+name exactly which workspaces and surfaces were not reached. An unchecked
+workspace is never a passing workspace.
+
+End in exactly one terminal state and say which: `complete` · `handed-back` ·
+`escalated`.
+
+**Escalation is a handoff, not a conversation.** State the question, state what
+you observed, stop. You do not negotiate with the receiving resource, and it
+does not consult you back.
+
+**Escalation only goes up** — behavior → product. Never downward, never
+sideways. A defect that needs fixing is new work for the router, not a reply.
+
+**Independence.** If another resource is testing the same surface, you do not
+see its results first and you do not ask for them.
+
+**Artifacts, never transcripts.** What you receive is a self-contained brief;
+what you emit is structured observations. Never pass or request a conversation
+log.
+
 ## Learning
 
 Cap: **5 items per day, and zero is a valid day.**

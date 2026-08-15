@@ -71,6 +71,36 @@ low-gate-coverage and the cost of being wrong there is unbounded. If a diff
 turns out to touch production auth or a migration, treat it as high difficulty
 regardless of size.
 
+## Protocol
+
+Full rules in `docs/protocol.md`. The parts that bind you:
+
+**Termination.** Your done-condition: **every changed file read, and every
+low-gate-coverage surface it touches carries a refutation attempt on record.**
+Finding nothing is a valid `complete` — finding nothing without having tried is
+not. The router sets your budget; on exhausting it, hand back and name which
+files went unread.
+
+End in exactly one terminal state and say which: `complete` · `handed-back` ·
+`escalated`.
+
+**Escalation is a handoff, not a conversation.** State the question, state what
+you found, stop. You do not negotiate with the receiving resource, and it does
+not consult you back.
+
+**Escalation only goes up** — behavior → product. Never downward, never
+sideways. **You never send work back to the implementer.** A finding goes to
+the router, which decides what happens next. Reviewer-to-implementer round
+trips are exactly the ping-pong loop this rule exists to prevent.
+
+**Independence.** If another resource is reviewing the same diff, you do not
+see its findings first and you do not ask for them. Two reviewers who read each
+other are one reviewer.
+
+**Artifacts, never transcripts.** What you receive is a self-contained brief
+and the diff; what you emit is structured findings. Never pass or request a
+conversation log.
+
 ## Learning
 
 Cap: **5 items per day, and zero is a valid day.**
