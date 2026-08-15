@@ -16,6 +16,7 @@ The team is virtual. The work isn't.
 ```
 /assign  <what you need done>     # routes to a resource, or reports a gap
 /hire    <capability id>          # drafts a new resource for a gap
+/retire  <resource>               # removes one — team size has a measured cost
 ```
 
 Everything else runs on a schedule: daily learning (capped, proposals only)
@@ -30,8 +31,10 @@ and a weekly report to the CTO.
 | `personas/` | The variants that weren't picked. Swapping is a one-line change in `registry.yaml`. |
 | `skills/assign/` | The router. Matches a request to a capability, or reports no coverage. |
 | `skills/hire/` | Turns a gap into a new resource definition. |
-| `ledger/` | Evidence. Escapes, attributions, rule-state changes. |
-| `docs/` | Charter, difficulty map, learning policy, weekly report format. |
+| `skills/retire/` | Removes one. V-teams are temporary by design. |
+| `ledger/` | Evidence. Escapes, attributions, rule-state changes, run graphs. |
+| `docs/protocol.md` | **Cross-cutting rules every resource follows.** Termination, escalation, independence. |
+| `docs/` | Charter, difficulty map, learning policy, weekly report, dashboard design. |
 
 ## The V-Team
 

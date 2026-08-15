@@ -14,8 +14,17 @@ ledger/
   escapes/     YYYY-MM-DD-<slug>.md   defects that got past a stage
   gaps/        YYYY-MM-DD-<slug>.md   requests nobody could cover
   rules/       <rule-id>.md           a rule and its state history
-  reports/     YYYY-Www.md            the weekly report, archived
+  learnings/   YYYY-MM-DD-<slug>.md   what was learned, and from which source
+  runs/        <run-id>.jsonl         the delegation tree, append-only
+  reports/
+    daily/     YYYY-MM-DD.md          raw journal, no conclusions
+               YYYY-Www.md            the weekly report
+    monthly/   YYYY-MM.md             the trend view
+               BASELINE.md            day zero — write it before anything runs
 ```
+
+Schemas: `docs/tracker.md` for learnings and rollups, `docs/dashboard.md` for
+the run graph.
 
 ## Escape entry
 

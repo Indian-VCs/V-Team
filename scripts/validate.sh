@@ -34,7 +34,18 @@ for f in resources/*.md; do
   [[ "$fmname" == "$want" ]] || fail "$f: frontmatter name '$fmname' does not match filename '$want'"
 done
 
-# 4. Autonomy is one of the three known values.
+# 4. Every resource embeds the protocol. docs/protocol.md is canonical, but an
+#    agent loading its own definition never reads it — so the compact copy has
+#    to be present, or the rule does not exist for that resource.
+for f in resources/*.md; do
+  grep -q '^## Protocol'                  "$f" || fail "$f: missing '## Protocol' section (see docs/protocol.md)"
+  grep -q 'done-condition'                "$f" || fail "$f: protocol missing a done-condition — termination is the largest failure category"
+  grep -q 'handed-back'                   "$f" || fail "$f: protocol missing terminal states (complete / handed-back / escalated)"
+  grep -q 'only goes up'                  "$f" || fail "$f: protocol missing the no-downward-escalation rule"
+  grep -qi 'never transcripts'            "$f" || fail "$f: protocol missing the artifacts-not-transcripts rule"
+done
+
+# 5. Autonomy is one of the three known values.
 while read -r a; do
   case "$a" in
     recommend|branch|merge-on-green) ;;
@@ -42,7 +53,7 @@ while read -r a; do
   esac
 done < <(grep -E '^    autonomy: ' registry.yaml | sed 's/.*autonomy: //; s/#.*//' | tr -d ' ')
 
-# 5. A new or changed resource must start at recommend — probation is not
+# 6. A new or changed resource must start at recommend — probation is not
 #    optional. Enforced only against the base ref in CI, where it is knowable.
 if [[ -n "${GITHUB_BASE_REF:-}" ]]; then
   changed=$(git diff --name-only "origin/$GITHUB_BASE_REF"...HEAD -- resources/ || true)

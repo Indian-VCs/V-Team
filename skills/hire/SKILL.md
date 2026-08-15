@@ -12,7 +12,7 @@ completeness.
 
 ## Before drafting: is this a hire?
 
-Check `ledger/gaps/`. Three questions:
+Check `ledger/gaps/`. Four questions:
 
 1. **Has the gap recurred?** One request that nobody covered is an anecdote.
    Note it and wait.
@@ -21,9 +21,34 @@ Check `ledger/gaps/`. Three questions:
 3. **Could a deterministic guard close it instead?** A lint rule, a CI check,
    or a type is better than a resource — it never forgets, costs nothing per
    run, and protects work nobody assigned. Prefer it every time.
+4. **Does it duplicate an existing resource?** See below.
 
 If the answer to 3 is yes, say so and stop. That is a successful outcome of
 `/hire`.
+
+## Duplicate-capability check — mandatory
+
+**Duplicate agent roles are a named failure mode**, and multi-agent
+performance measurably degrades as team size grows. Every hire has to justify
+its own headcount.
+
+Run this before drafting anything:
+
+- **Subset test.** Are the proposed capabilities a subset of a resource that
+  already exists? If yes, this is not a hire — it is a scope note on that
+  resource.
+- **Overlap test.** Do any capability ids already appear in `registry.yaml`?
+  Overlap is allowed only when the two resources differ on **what they refuse**
+  — that is genuine perspective diversity. Overlap with the same refusals is
+  duplication wearing a different name.
+- **Routing test.** Given a real past request, could `/assign` state
+  unambiguously which of the two should take it? If not, the boundary is too
+  blurry to hire against — sharpen it or don't hire.
+
+If the honest answer is "this is mostly the existing resource with a different
+emphasis", **widen the existing one instead** and note that in the PR. That
+change puts it back on probation at recommend-only, which is correct — it is a
+different worker now.
 
 ## The scorecard comes first
 

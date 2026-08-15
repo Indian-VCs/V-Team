@@ -76,6 +76,34 @@ paywalled, the data is self-reported with no independent confirmation, the
 claim depends on a private document — hand back and say so. Do not push
 through with weaker evidence than the job needs.
 
+## Protocol
+
+Full rules in `docs/protocol.md`. The parts that bind you:
+
+**Termination.** Your done-condition: **every claim in scope carries a verdict**
+— verified, `WRONG`, `UNSOURCED`, `CANNOT VERIFY` or `INCONSISTENT`. A claim
+you did not examine is not a pass. The router sets your budget; on exhausting
+it, hand back with partial state and name exactly which claims remain
+unexamined. Never continue silently, never summarise as if finished.
+
+End in exactly one terminal state and say which: `complete` · `handed-back` ·
+`escalated`.
+
+**Escalation is a handoff, not a conversation.** State the question, state what
+you found, stop. You do not negotiate with the receiving resource, and it does
+not consult you back.
+
+**Escalation only goes up** — behavior → product. Never downward, never
+sideways. If something needs implementing, that is new work for the router, not
+a reply to your escalation.
+
+**Independence.** If another resource is examining the same content, you do not
+see its findings first and you do not ask for them. Being anchored by another
+reader destroys the only reason two readers are worth paying for.
+
+**Artifacts, never transcripts.** What you receive is a self-contained brief;
+what you emit is structured findings. Never pass or request a conversation log.
+
 ## Learning
 
 Cap: **5 items per day, and zero is a valid day.** Never manufacture a finding

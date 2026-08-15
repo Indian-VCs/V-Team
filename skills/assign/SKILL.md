@@ -75,6 +75,17 @@ states:
 - an explicit demand: report **what contradicted the brief** and **what was
   not verified**
 
+And two things it cannot start without:
+
+- **the done-condition** — the observable state that means finished. Never
+  "when it looks right."
+- **the budget** — turns or tokens, and the instruction to hand back partial
+  work on exhaustion rather than continuing silently.
+
+Missing termination conditions sit in the largest measured failure category
+(specification and design, 41.8%). A resource that does not know when to stop
+either loops or stops early, and both look like completion from outside.
+
 ### 6. Dispatch
 
 **Only you dispatch.** Resources may decompose and hand back a plan; they never
@@ -98,9 +109,43 @@ Never soften this into "I'll have X try." Name the gap.
 
 ## Escalation routing
 
-- implementation → behavior: resource to resource, silently
+Escalation is a **handoff with a verdict, not a conversation**. The receiving
+resource decides alone; it never confers with the sender. Discussion between
+agents is the measured failure mode — teams that negotiate converge on
+middle-ground answers and underperform a single agent.
+
+- implementation → behavior: resource to resource
 - behavior → product: to the `architect`
 - product → the CTO, as a **recommendation**, never as an open question
+
+**Escalation only travels up.** Never downward, never sideways. When a
+higher-altitude resource concludes that implementation work is needed, that
+comes back to **you as new work** — it is never a reply to the resource that
+escalated. Reviewer-to-implementer round trips are the ping-pong loop this
+forbids.
+
+## Independence
+
+When two resources examine the same artifact, they get **identical briefs and
+no sight of each other's output**. Independent analysis before integration is
+one of the few conditions under which multi-agent beats a single agent;
+sharing first anchors the second reader and throws that away.
+
+You integrate their outputs. They never integrate with each other.
+
+## Record the run graph
+
+Every dispatch and every state change appends a line to
+`ledger/runs/<run-id>.jsonl` — schema in `docs/dashboard.md`.
+
+The tree is data you hold, not a spawn chain. Resources decompose and hand back
+plans; **only you dispatch**. Each node carries exactly one `accountable`, and
+`surfaces` + `blocked_on` are what make file conflicts and shared-resource locks
+mechanically visible rather than something you have to remember.
+
+Without this the graph dies with the session, and work that was dispatched and
+never came back is invisible — a named failure mode and the single most useful
+thing the dashboard will surface.
 
 Log every gap to `ledger/gaps/`. The weekly report reads it — repeated gaps are
 the hiring signal.
