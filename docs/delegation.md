@@ -77,7 +77,7 @@ and it is not a stop. This is already true; it was just never written down.
 
 The last hire flagged it and nobody closed it. Closing it now:
 
-- `registry.yaml` declares `escalation.terminal` on `architect` **only**.
+- `registry.yaml` declared `escalation.terminal` on `architect` **only**.
 - `README.md` says *"Jarvis and Anubis are both product altitude and both
   terminal."*
 
@@ -88,12 +88,22 @@ property of a resource; it is a property of a *(resource, object)* pair.
 **team shape**. Neither is terminal on the other's object, and neither
 outranks the other.
 
-**Recommended fix, for the CTO to approve — not applied here:** split
-`escalation.terminal` into `escalation.terminal.product` (`architect`) and
-`escalation.terminal.team` (`roster-steward`). It is not applied because
-granting myself a capability in the registry I own is self-dealing, and
-`resources/roster-steward.md` forbids me auditing my own definition. It needs
-a second reader.
+**Applied 2026-08-16 on CTO instruction** (*"escalation.terminal - do two
+split"*): `escalation.terminal` is now `escalation.terminal.product`
+(`architect`) and `escalation.terminal.team` (`roster-steward`).
+
+**These are not two ranks.** There is no ordering between the ids. Each
+resource is terminal on its own object and an **ordinary product-altitude
+resource with no special standing** on the other's. Neither routes through the
+other. A team-shape question does not become a product-shape one by being
+escalated, and `architect` cannot receive one on its way up.
+
+The sequence matters more than the capability: it was **proposed** by
+`roster-steward` and **deliberately not self-applied**, because granting
+yourself a capability in a registry you own is self-dealing regardless of
+whether the change is correct. It was applied only once the CTO instructed it,
+which makes it granted rather than taken. That is the property that makes the
+registry worth reading.
 
 **Either way the count does not grow.** A dispatcher would add a *fourth*
 product-altitude stop only if it were on the ladder, and it is not. There are

@@ -160,11 +160,28 @@ memory-isolation escape logged the same day — see
 
 ## Open, handed to the CTO
 
-1. **`escalation.terminal` is a badly shaped capability id.** Terminal is a
-   property of *(resource, object)*, not of a resource. `registry.yaml` gives it
-   to `architect` alone; `README.md` calls both product-altitude resources
-   terminal. Recommended split: `escalation.terminal.product` (`architect`) and
-   `escalation.terminal.team` (`roster-steward`). **Not applied** — granting
-   myself a capability in a registry I own is self-dealing and needs a second
-   reader.
+1. **`escalation.terminal` was a badly shaped capability id — RESOLVED, and
+   the sequence is the point.** Terminal is a property of *(resource, object)*,
+   not of a resource. `registry.yaml` gave it to `architect` alone; `README.md`
+   called both product-altitude resources terminal. Both statements were
+   defensible and they contradicted each other.
+
+   | Step | What happened |
+   |---|---|
+   | **Proposed** | `roster-steward` recommended splitting into `escalation.terminal.product` (`architect`) and `escalation.terminal.team` (`roster-steward`) |
+   | **Refused self-application** | Declined to apply it, on the grounds that granting yourself a capability in a registry you own is self-dealing **regardless of whether the change is correct**. Handed it to the CTO instead. |
+   | **Applied on instruction** | CTO, verbatim: *"escalation.terminal - do two split"*. Applied 2026-08-16. |
+
+   Recorded in that order deliberately. The capability itself is minor; what is
+   worth keeping is that the resource that owns the registry did **not** write
+   itself a capability it believed in, and waited to be granted it. A registry
+   is only worth reading if the thing maintaining it will refuse itself.
+
+   **Not a rank.** The two ids are unordered. Each resource is terminal on its
+   own object and an ordinary product-altitude resource with no special
+   standing on the other's; neither routes through the other. Written that way
+   in the `registry.yaml` header, `resources/architect.md`,
+   `resources/roster-steward.md` and `docs/delegation.md`, because a single
+   `escalation.terminal` id is exactly what read as a rank and produced the
+   contradiction.
 2. **The retirement case**, deferred to the queued audit above.
