@@ -186,8 +186,11 @@ implementation → behavior → product → CTO. Nothing escalates downward or
 sideways, and an escalation is a handoff with a verdict, never a negotiation.
 
 **Jarvis and Anubis are both product altitude and both terminal**, on different
-objects: Jarvis answers whether a *product* change should exist, Anubis whether a
-*resource* should. Neither decides — both hand the CTO a recommendation. Anubis
+objects: Jarvis holds `escalation.terminal.product` and answers whether a
+*product* change should exist; Anubis holds `escalation.terminal.team` and
+answers whether a *resource* should. **These are not two ranks** — the ids are
+unordered, and on the other's object each is an ordinary product-altitude
+resource with no special standing. Neither decides — both hand the CTO a recommendation. Anubis
 also owns the other direction: `/retire`, and whether anyone has earned a
 promotion off probation.
 

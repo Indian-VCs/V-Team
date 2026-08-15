@@ -8,6 +8,14 @@
 #             implementation -> behavior -> product
 # Autonomy  = what it may do without approval
 #             recommend | branch | merge-on-green
+# Terminal  = `escalation.terminal.<object>`. TERMINAL IS A PROPERTY OF THE
+#             PAIR (resource, object), NEVER OF A RESOURCE ALONE. There is no
+#             ordering between the two ids and neither outranks the other:
+#             architect is the last stop on PRODUCT shape, roster-steward on
+#             TEAM shape, and each is a non-terminal ordinary escalation target
+#             on the other's object. Split by CTO instruction 2026-08-16; it
+#             was one id, which read as a rank and made README and registry
+#             contradict each other. See docs/delegation.md.
 # Callsign  = a CHARACTER, and that character is NOT HUMAN, and the name
 #             ENCODES THE JOB well enough to defend in one clause (the comment
 #             beside it IS that clause). CTO rule, 2026-08-16. roster-steward
@@ -159,6 +167,7 @@ resources:
       - team.registry-honesty       # declared capability vs artifact behind it
       - team.orientation            # orient.sh runs before real work, not after
       - team.callsign               # the naming rule; last check before a name is permanent
+      - escalation.terminal.team    # last stop before the CTO on TEAM shape
     surfaces:
       - registry.yaml
       - resources/**
@@ -191,7 +200,7 @@ resources:
     capabilities:
       - product.impact
       - product.should-this-exist
-      - escalation.terminal              # last stop before the manager
+      - escalation.terminal.product      # last stop before the CTO on PRODUCT shape
     surfaces:
       - reads everything, writes nothing
     beat: what changes the shape of the product
