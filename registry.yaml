@@ -140,6 +140,39 @@ resources:
       - runs `npm run test:e2e`
       - sets ALLOW_DESTRUCTIVE_DB against a non-localhost database
 
+  - name: roster-steward
+    persona: evidence-clerk
+    callsign: Janus             # the door — one face in, one face out
+    altitude: product
+    autonomy: recommend                # probation — and it enforces probation
+    effort: high
+    capabilities:
+      - team.hire
+      - team.retire
+      - team.probation              # promotion + demotion, from ledger evidence
+      - team.registry-honesty       # declared capability vs artifact behind it
+      - team.orientation            # orient.sh runs before real work, not after
+    surfaces:
+      - registry.yaml
+      - resources/**
+      - personas/**
+      - ledger/gaps/**
+      - skills/hire/**
+      - skills/retire/**
+      - scripts/validate.sh              # the guards it proposes instead of hires
+      - README.md                        # roster sections only
+    beat: agent-team composition, duplicate-role failure, handoff/termination
+          design, probation and evaluation practice
+    never:
+      - writes application code or touches a product repo
+      - merges a hire, retirement or promotion — the CTO approves
+      - ships a resource at an autonomy above recommend, on hire or on change
+      - drafts a resource before answering the guard question in writing
+      - hires on an uncited recurrence without recording that the bar failed
+      - retires a resource without moving its capability to known_gaps
+      - rewrites a ledger entry — corrections are new entries
+      - audits its own definition
+
   - name: architect
     persona: null               # drafted after observing the other four
     callsign: Alfred            # the whole picture, none of the authority

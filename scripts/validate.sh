@@ -45,6 +45,49 @@ for f in resources/*.md; do
   grep -qi 'never transcripts'            "$f" || fail "$f: protocol missing the artifacts-not-transcripts rule"
 done
 
+# 4b. Capability ids are unique across resources. This is the MECHANICAL HALF of
+#     the /hire overlap test — two resources declaring the same id is duplication
+#     wearing a different name, and a script can see it. The judgement half (do
+#     they differ on what they REFUSE?) stays with roster-steward.
+caps=$(awk '
+  /^    capabilities:/ { in_caps=1; next }
+  /^    [a-z_-]+:/     { in_caps=0 }
+  in_caps && /^      - / { sub(/^      - /,""); sub(/[[:space:]]*#.*/,""); print }
+' registry.yaml)
+while read -r dup; do
+  [[ -n "$dup" ]] && fail "registry.yaml: capability '$dup' is declared by more than one resource (see skills/hire overlap test)"
+done < <(echo "$caps" | sort | uniq -d)
+
+# 4c. A capability nobody covers and a capability somebody covers are different
+#     lists. An id in both is registry.yaml lying to /assign in one direction or
+#     the other.
+gap_ids=$(grep -E '^  - id: ' registry.yaml | sed 's/.*id: //' | tr -d ' ')
+for g in $gap_ids; do
+  echo "$caps" | grep -qx "$g" && fail "registry.yaml: '$g' is in known_gaps but is also declared as a capability"
+done
+
+# 4d. Altitude is one of the three levels the escalation ladder knows about.
+while read -r alt; do
+  case "$alt" in
+    implementation|behavior|product) ;;
+    *) fail "registry.yaml: unknown altitude '$alt' (expected implementation | behavior | product)" ;;
+  esac
+done < <(grep -E '^    altitude: ' registry.yaml | sed 's/.*altitude: //; s/#.*//' | tr -d ' ')
+
+# 4e. README headcount matches the registry. The roster drifted once already —
+#     design-reviewer was registered, defined and absent from the README table.
+#     Nothing caught it, so now something does.
+n_res=$(echo "$registered" | wc -w | tr -d ' ')
+n_readme=$(grep -oE '\*\*Headcount: [0-9]+ resources' README.md | grep -oE '[0-9]+' | head -1)
+if [[ -z "$n_readme" ]]; then
+  fail "README.md: no '**Headcount: N resources' line to check against the registry"
+elif [[ "$n_readme" != "$n_res" ]]; then
+  fail "README.md claims $n_readme resources but registry.yaml declares $n_res"
+fi
+for r in $registered; do
+  grep -q "\`$r\`" README.md || fail "README.md: '$r' is in registry.yaml but appears nowhere in the README roster"
+done
+
 # 5. Autonomy is one of the three known values.
 while read -r a; do
   case "$a" in
@@ -64,6 +107,17 @@ if [[ -n "${GITHUB_BASE_REF:-}" ]]; then
       fail "$f changed but '$n' has autonomy '$aut' — a changed resource re-enters probation at 'recommend' (docs/charter.md)"
     fi
   done
+
+  # 7. A hire is evidence or it is not a hire. A PR that adds a resource must
+  #    add the ledger/gaps/ entry recording every /hire check and its answer —
+  #    including the ones that failed. This is the mechanical half of "hires are
+  #    recorded"; whether the recurrence bar was actually MET stays judgement,
+  #    and belongs to roster-steward.
+  new_res=$(git diff --name-only --diff-filter=A "origin/$GITHUB_BASE_REF"...HEAD -- resources/ || true)
+  if [[ -n "$new_res" ]]; then
+    new_gap=$(git diff --name-only --diff-filter=A "origin/$GITHUB_BASE_REF"...HEAD -- ledger/gaps/ || true)
+    [[ -n "$new_gap" ]] || fail "this PR adds $(echo "$new_res" | wc -l | tr -d ' ') resource(s) but no ledger/gaps/ entry — a hire without its recorded checks is not reviewable (skills/hire)"
+  fi
 fi
 
 [[ $status -eq 0 ]] && echo "registry valid: $(echo "$registered" | wc -w | tr -d ' ') resources"

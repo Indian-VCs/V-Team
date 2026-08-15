@@ -69,15 +69,17 @@ without changing anything else.
 
 ## The V-Team
 
-**Headcount: 6 resources across 5 departments.** One product staffed
+**Headcount: 8 resources across 7 departments.** One product staffed
 (prism-platform); the other five are dormant and staffed on need.
 
 | Callsign | Resource | Dept | Persona | Altitude | Autonomy |
 |---|---|---|---|---|---|
 | **Alfred** | `architect` | Architecture | — | product | recommend |
+| **Janus** | `roster-steward` | Team | Evidence Clerk | product | recommend *(probation)* |
 | **Heimdall** | `adversarial-reviewer` | Quality | Isolation Hawk | behavior | recommend |
 | **Neo** | `tenant-visibility-tester` | Quality | Admin | behavior | recommend |
 | **Hermione** | `content-auditor` | Content | Fact-Checker | behavior | recommend |
+| **Ariadne** | `design-reviewer` | Design | Wayfinder | behavior | recommend *(probation)* |
 | **Marshal** | `deployment-engineer` | Deployment | Release Marshal | behavior | recommend *(probation)* |
 | **Samwise** | `implementer` | Engineering | Conventions-First | implementation | PR + merge on green |
 
@@ -88,8 +90,10 @@ does not.
 Each name encodes the job. **Heimdall** watches the boundary between realms —
 tenant isolation. **Neo** checks what actually renders against what the config
 claims. **Hermione** opens the source before the copy. **Samwise** is
-dependable and never improvises. **Marshal** walks the checklist and holds the
-release. **Alfred** holds the whole picture and none of the authority.
+dependable and never improvises. **Ariadne** hands you the thread out of the
+labyrinth. **Marshal** walks the checklist and holds the release. **Alfred**
+holds the whole picture and none of the authority. **Janus** is the door — one
+face on who comes in, one on who goes out.
 
 ### Department sizes
 
@@ -98,8 +102,10 @@ release. **Alfred** holds the whole picture and none of the authority.
 | Quality | **2** | does it break, and can a member see it |
 | Architecture | **1** | should this exist |
 | Content | **1** | is it factually true |
+| Design | **1** | can a member find what is there |
 | Deployment | **1** | does it ship, versioned, and can it come back |
 | Engineering | **1** | build it |
+| Team | **1** | who is on the team, and have they earned it |
 
 Quality is the largest deliberately. Verification is the one shape where
 multi-agent measurably beats a single agent; generation is not.
@@ -119,18 +125,22 @@ flowchart TD
     ROUTER(["/assign — router<br/><i>the only dispatcher</i>"])
 
     ALFRED["<b>Alfred</b> · architect<br/>Architecture<br/><i>product altitude · recommend-only</i>"]
+    JANUS["<b>Janus</b> · roster-steward<br/>Team<br/><i>product altitude · recommend · probation</i>"]
 
     HEIMDALL["<b>Heimdall</b><br/>adversarial-reviewer"]
     NEO["<b>Neo</b><br/>tenant-visibility-tester"]
     HERMIONE["<b>Hermione</b><br/>content-auditor"]
+    ARIADNE["<b>Ariadne</b> · design-reviewer<br/>Design<br/><i>recommend · probation</i>"]
     MARSHAL["<b>Marshal</b> · deployment-engineer<br/>Deployment<br/><i>recommend · probation</i>"]
     SAMWISE["<b>Samwise</b> · implementer<br/>Engineering<br/><i>merge on green</i>"]
 
     CTO --> ROUTER
     ROUTER --> ALFRED
+    ROUTER --> JANUS
     ROUTER --> HEIMDALL
     ROUTER --> NEO
     ROUTER --> HERMIONE
+    ROUTER --> ARIADNE
     ROUTER --> MARSHAL
     ROUTER --> SAMWISE
 
@@ -141,6 +151,7 @@ flowchart TD
     HERMIONE -. escalates .-> ALFRED
     MARSHAL -. escalates .-> ALFRED
     ALFRED -. recommends .-> CTO
+    JANUS -. recommends .-> CTO
 
     subgraph QUALITY [" Quality · 2 "]
         HEIMDALL
@@ -148,6 +159,9 @@ flowchart TD
     end
     subgraph CONTENT [" Content · 1 "]
         HERMIONE
+    end
+    subgraph DESIGN [" Design · 1 "]
+        ARIADNE
     end
     subgraph DEPLOY [" Deployment · 1 "]
         MARSHAL
@@ -158,6 +172,17 @@ Solid lines are **dispatch** — only the router does it, and it holds the whole
 run graph. Dotted lines are **escalation**, which travels one way only:
 implementation → behavior → product → CTO. Nothing escalates downward or
 sideways, and an escalation is a handoff with a verdict, never a negotiation.
+
+**Alfred and Janus are both product altitude and both terminal**, on different
+objects: Alfred answers whether a *product* change should exist, Janus whether a
+*resource* should. Neither decides — both hand the CTO a recommendation. Janus
+also owns the other direction: `/retire`, and whether anyone has earned a
+promotion off probation.
+
+> The chart's remaining resource-to-resource escalation edges predate this and
+> are flagged for audit — `SAMWISE -. escalates .-> HEIMDALL` points sideways at
+> a reviewer rather than back at the router, which `docs/protocol.md` §3 does not
+> allow. No new resource-to-resource edges are drawn.
 
 The tree of work is data (`ledger/runs/`), not a spawn chain. Resources
 decompose and hand back plans; they never spawn each other.
