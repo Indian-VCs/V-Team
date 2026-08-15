@@ -71,8 +71,10 @@ VT_BACKFILL_MAX_DAYS="${VT_BACKFILL_MAX_DAYS:-30}"
 vt_resources() { grep -E '^  - name: ' "$VT_ROOT/registry.yaml" | sed 's/.*name: //' | tr -d ' '; }
 
 vt_field() {                                  # $1 = resource, $2 = field
+  # Strips trailing YAML comments (` #...`), which several fields carry —
+  # otherwise a callsign comes back as "Hermione  # opens the source first".
   awk "/^  - name: $1\$/,/^\$/" "$VT_ROOT/registry.yaml" \
-    | grep -m1 "^    $2: " | sed "s/^    $2: //; s/[[:space:]]*$//"
+    | grep -m1 "^    $2: " | sed "s/^    $2: //; s/[[:space:]]\{1,\}#.*//; s/[[:space:]]*$//"
 }
 
 # --- model -------------------------------------------------------------------
@@ -97,9 +99,14 @@ vt_model() {
 # resource's — that is what keeps the independence rule real (docs/memory.md).
 export VT_BRAIN_HOME="${VT_BRAIN_HOME:-$HOME/.v-team/brain}"
 
+# GBRAIN_NO_RETRY_CONNECT is not optional here. Without it a CLI call against a
+# brain already held by `gbrain serve` (MCP) RETRIES rather than failing, and
+# the routine hangs instead of spooling — observed the moment the vteam-brain
+# MCP server was registered. Fail fast, spool, move on.
 vt_brain() {                                  # $1 = source (callsign), rest = gbrain args
   local src="$1"; shift
-  GBRAIN_HOME="$VT_BRAIN_HOME" GBRAIN_SOURCE="$src" gbrain "$@" 2>&1 | grep -v UPGRADE_AVAILABLE
+  GBRAIN_HOME="$VT_BRAIN_HOME" GBRAIN_SOURCE="$src" GBRAIN_NO_RETRY_CONNECT=1 \
+    gbrain "$@" 2>&1 | grep -v UPGRADE_AVAILABLE
 }
 
 # PGLite is SINGLE-WRITER: while `gbrain serve` holds the brain for MCP, a CLI
@@ -109,7 +116,7 @@ vt_brain_put() {                              # $1 = source, $2 = slug, content 
   local src="$1" slug="$2" body spool
   body="$(cat)"
   if printf '%s' "$body" | GBRAIN_HOME="$VT_BRAIN_HOME" GBRAIN_SOURCE="$src" \
-       gbrain put "$slug" >/dev/null 2>&1; then
+       GBRAIN_NO_RETRY_CONNECT=1 gbrain put "$slug" >/dev/null 2>&1; then
     return 0
   fi
   spool="$VT_STATE/spool/$src"; mkdir -p "$spool"
@@ -125,7 +132,7 @@ vt_brain_drain() {
   for f in "$d"/*/*.md; do
     [[ -e "$f" ]] || continue
     src="$(basename "$(dirname "$f")")"; slug="$(basename "$f" .md)"
-    if GBRAIN_HOME="$VT_BRAIN_HOME" GBRAIN_SOURCE="$src" gbrain put "$slug" < "$f" >/dev/null 2>&1; then
+    if GBRAIN_HOME="$VT_BRAIN_HOME" GBRAIN_SOURCE="$src" GBRAIN_NO_RETRY_CONNECT=1 gbrain put "$slug" < "$f" >/dev/null 2>&1; then
       rm -f "$f"; vt_log "drained $src/$slug"
     fi
   done

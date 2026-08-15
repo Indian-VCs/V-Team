@@ -69,8 +69,54 @@ Within a resource's store:
 | `episode-<YYYY-MM-DD>-<slug>` | what it observed on a task, and the outcome |
 | `record` | findings raised / confirmed / dismissed — derived, never claimed |
 
-`record` is what the monthly report reads for promotion proposals. It is
-computed from ledger outcomes, not from a resource's own account of how it did.
+| `orientation-notes` | what it took away from its ramp — first-person |
+
+## Orientation is a process, not a page
+
+`setup-brain.sh` seeds an `orientation` page telling a resource what to read.
+Nothing made it read. `orient.sh` runs the ramp for real:
+
+```sh
+./scripts/orient.sh              # any resource not yet oriented
+./scripts/orient.sh heimdall     # one, forced
+./scripts/orient.sh --status
+```
+
+It puts the product's hard rules and every escape touching that resource's
+declared surfaces in front of it, and asks for notes it would want on its first
+task — not a summary. The output lands in **its own** store as
+`orientation-notes`.
+
+Runs **once** per resource, unattended. Re-run deliberately after a resource's
+definition changes: a changed resource is a different worker, which is the same
+reason it re-enters probation.
+
+## Track record
+
+```sh
+./scripts/record.sh              # recompute every `record` page
+./scripts/record.sh --print      # stdout, write nothing
+```
+
+Every number is derived from ledger artifacts the resource **cannot write about
+itself** — the system's own rule applied to the resource's own file. It is
+overwritten on each recompute and must not be hand-edited.
+
+Two judgement calls encoded in it:
+
+- **Only `resource-error` escapes count against a record.** Escapes attributed
+  to *no-gate-coverage*, *ambiguous-brief* or *impossible-task* are excluded.
+  Charging a worker for a system failure is what makes most performance
+  management useless.
+- **Hand-backs are not negative.** A resource handing back work above its tier
+  is the escalation rule working. One that never hands back is either lucky or
+  pushing through.
+
+`dropped` — dispatched and never returned — is a finding, not a statistic. Any
+non-zero value means the run graph caught something the session would have lost.
+
+The **monthly** report reads this for autonomy proposals. The weekly does not:
+a week is noise for a trust decision.
 
 ## Bounded, or it becomes noise
 
@@ -111,17 +157,39 @@ Consequences:
   **Liveness** section.
 - Do not assume a write landed because the command exited.
 
-**The real fix is Postgres.** A Supabase-backed V-Team brain accepts concurrent
-connections, so MCP and the scheduled routines can both hold it. A `gbrain`
-Supabase project already exists. Migration path:
+### This is blocking, not theoretical
 
-```sh
-GBRAIN_HOME=~/.v-team/brain gbrain migrate --to supabase
+Registering the `vteam-brain` MCP server made it immediate. Claude Code keeps
+the server connected, `gbrain serve` holds the PGLite lock continuously, and
+**every scheduled CLI write spools instead of landing** — confirmed:
+
+```
+brain locked — spooled hermione/record (retries next window)
 ```
 
-Deferred deliberately — PGLite costs nothing and works today, and the write
-volume is five capped items a day. Revisit when a blocked write appears in the
-weekly report more than once.
+`GBRAIN_NO_RETRY_CONNECT=1` is set on every CLI call so a locked brain fails
+fast rather than hanging; without it the routine blocks instead of spooling.
+That makes the failure survivable, not solved: with MCP permanently connected
+the spool never drains.
+
+**PGLite supports MCP access or scheduled writes. Not both.**
+
+Three ways out, in order of preference:
+
+1. **Migrate to Postgres** — the only configuration where both work.
+   ```sh
+   GBRAIN_HOME=~/.v-team/brain gbrain migrate --to supabase
+   ```
+   Needs Supabase credentials. A `gbrain` Supabase project is referenced in
+   prism-platform's CLAUDE.md, so the target may already exist.
+2. **Drop the MCP registration** — routines own the brain, and it is read from
+   the CLI on demand. Cheapest, but gives up the MCP access that was the point.
+3. **Leave it spooling** — writes accumulate in `~/.v-team/spool/` and land
+   whenever MCP is disconnected. Not a design, just a fact about the current
+   state.
+
+Until (1) or (2), treat the brain as write-deferred and check
+`~/.v-team/spool/` for anything queued.
 
 ## Embeddings
 
