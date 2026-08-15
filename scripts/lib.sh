@@ -112,9 +112,33 @@ vt_brain() {                                  # $1 = source (callsign), rest = g
 # PGLite is SINGLE-WRITER: while `gbrain serve` holds the brain for MCP, a CLI
 # write is refused. Spool instead of losing the write, and surface it — a
 # scheduled job that fails silently is worse than one that never ran.
+# A gbrain write against a source that DOES NOT EXIST does not fail — it lands
+# in `default`, which is FEDERATED and readable by every resource. That is how
+# the isolation guarantee broke for every hire made after setup-brain.sh last
+# ran (ledger/escapes/2026-08-16-hire-path-no-brain-source.md). So: create the
+# source before writing, and refuse the write if it still is not there. Never
+# fall back to `default` — a lost note is recoverable, a leaked one is not.
+vt_brain_ensure_source() {                    # $1 = source id (callsign, lowercase)
+  local src="$1"
+  [[ -n "$src" && "$src" != "default" ]] || return 1
+  if GBRAIN_HOME="$VT_BRAIN_HOME" GBRAIN_NO_RETRY_CONNECT=1 gbrain sources list 2>/dev/null \
+       | grep -qE "^  $src "; then return 0; fi
+  GBRAIN_HOME="$VT_BRAIN_HOME" GBRAIN_NO_RETRY_CONNECT=1 gbrain sources add "$src" >/dev/null 2>&1
+  if GBRAIN_HOME="$VT_BRAIN_HOME" GBRAIN_NO_RETRY_CONNECT=1 gbrain sources list 2>/dev/null \
+       | grep -qE "^  $src "; then
+    vt_log "brain: created isolated source '$src'"; return 0
+  fi
+  vt_log "brain: source '$src' MISSING and could not be created — refusing the write"
+  return 1
+}
+
 vt_brain_put() {                              # $1 = source, $2 = slug, content on stdin
   local src="$1" slug="$2" body spool
   body="$(cat)"
+  vt_brain_ensure_source "$src" || {
+    spool="$VT_STATE/spool/$src"; mkdir -p "$spool"; printf '%s' "$body" > "$spool/$slug.md"
+    vt_log "brain: no isolated source for $src — spooled $src/$slug rather than leaking to default"
+    return 1; }
   if printf '%s' "$body" | GBRAIN_HOME="$VT_BRAIN_HOME" GBRAIN_SOURCE="$src" \
        GBRAIN_NO_RETRY_CONNECT=1 gbrain put "$slug" >/dev/null 2>&1; then
     return 0
@@ -132,6 +156,7 @@ vt_brain_drain() {
   for f in "$d"/*/*.md; do
     [[ -e "$f" ]] || continue
     src="$(basename "$(dirname "$f")")"; slug="$(basename "$f" .md)"
+    vt_brain_ensure_source "$src" || continue
     if GBRAIN_HOME="$VT_BRAIN_HOME" GBRAIN_SOURCE="$src" GBRAIN_NO_RETRY_CONNECT=1 gbrain put "$slug" < "$f" >/dev/null 2>&1; then
       rm -f "$f"; vt_log "drained $src/$slug"
     fi

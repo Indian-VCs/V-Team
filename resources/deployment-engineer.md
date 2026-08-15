@@ -155,7 +155,7 @@ never shipped is worse than no version, because the next reader trusts it.
 - Secrets are referenced, never printed. Piping is how you set them
   (`... | gh secret set NAME`), so the value never lands in a transcript.
 - **Every commit you author carries the attribution trailer** (see
-  `docs/protocol.md`): `V-Team-Resource: deployment-engineer (Marshal)`.
+  `docs/protocol.md`): `V-Team-Resource: deployment-engineer (Cerberus)`.
 
 ## Output contract
 

@@ -8,6 +8,12 @@
 #             implementation -> behavior -> product
 # Autonomy  = what it may do without approval
 #             recommend | branch | merge-on-green
+# Callsign  = a CHARACTER, and that character is NOT HUMAN, and the name
+#             ENCODES THE JOB well enough to defend in one clause (the comment
+#             beside it IS that clause). CTO rule, 2026-08-16. roster-steward
+#             is the last check before a name becomes permanent — a callsign
+#             lands in commit trailers and merged ledger entries, which are
+#             never rewritten. See skills/hire "Placement".
 # Effort    = selected by TASK DIFFICULTY, not by identity. The value here is
 #             the resource's default; the router overrides it per task.
 #             Difficulty is defined as inverse gate coverage — see
@@ -21,7 +27,7 @@ scope:
 resources:
   - name: content-auditor
     persona: fact-checker       # alternates in personas/variants.md
-    callsign: Hermione          # opens the source before the copy
+    callsign: Mimir              # the well the truth comes from — drink at the source
     altitude: behavior
     autonomy: recommend
     effort: default
@@ -40,7 +46,7 @@ resources:
 
   - name: tenant-visibility-tester
     persona: admin
-    callsign: Neo               # what the config claims vs what actually renders
+    callsign: Argus              # a hundred eyes; believes only what they actually see
     altitude: behavior
     autonomy: recommend
     effort: default
@@ -57,7 +63,7 @@ resources:
 
   - name: adversarial-reviewer
     persona: isolation-hawk
-    callsign: Heimdall          # watches the boundary between realms
+    callsign: Heimdall           # watches the boundary between realms
     altitude: behavior
     autonomy: recommend
     effort: default                    # -> high on low-gate-coverage surfaces
@@ -74,7 +80,7 @@ resources:
 
   - name: implementer
     persona: conventions-first
-    callsign: Samwise           # dependable, follows the path, never improvises
+    callsign: Samwise            # dependable, follows the path, never improvises
     altitude: implementation
     autonomy: merge-on-green
     effort: low                        # escalates with task difficulty
@@ -91,7 +97,7 @@ resources:
 
   - name: design-reviewer
     persona: wayfinder
-    callsign: Ariadne           # hands you the thread out of the labyrinth
+    callsign: Bagheera           # knows every path, shows the one you can actually take
     altitude: behavior
     autonomy: recommend                # probation
     effort: high
@@ -114,7 +120,7 @@ resources:
 
   - name: deployment-engineer
     persona: release-marshal
-    callsign: Marshal           # walks the gate; every line is blocking
+    callsign: Cerberus           # stands at the gate; nothing ships past it unchecked
     altitude: behavior
     autonomy: recommend                # probation — deploy earns trust slowly
     effort: high
@@ -142,7 +148,7 @@ resources:
 
   - name: roster-steward
     persona: evidence-clerk
-    callsign: Janus             # the door — one face in, one face out
+    callsign: Anubis             # weighs each one against the standard, hands the verdict up
     altitude: product
     autonomy: recommend                # probation — and it enforces probation
     effort: high
@@ -152,6 +158,7 @@ resources:
       - team.probation              # promotion + demotion, from ledger evidence
       - team.registry-honesty       # declared capability vs artifact behind it
       - team.orientation            # orient.sh runs before real work, not after
+      - team.callsign               # the naming rule; last check before a name is permanent
     surfaces:
       - registry.yaml
       - resources/**
@@ -168,6 +175,8 @@ resources:
       - merges a hire, retirement or promotion — the CTO approves
       - ships a resource at an autonomy above recommend, on hire or on change
       - drafts a resource before answering the guard question in writing
+      - ships a callsign that is human, is a job title, or has no one-clause
+        justification in the README name-encoding paragraph
       - hires on an uncited recurrence without recording that the bar failed
       - retires a resource without moving its capability to known_gaps
       - rewrites a ledger entry — corrections are new entries
@@ -175,7 +184,7 @@ resources:
 
   - name: architect
     persona: null               # drafted after observing the other four
-    callsign: Alfred            # the whole picture, none of the authority
+    callsign: Jarvis             # sees every system at once, gives orders to no one
     altitude: product
     autonomy: recommend                # highest altitude, lowest autonomy
     effort: high

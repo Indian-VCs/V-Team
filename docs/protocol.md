@@ -60,6 +60,19 @@ form, and step repetition is a named failure mode. If a higher-altitude
 resource needs implementation work done, that is **new work returned to the
 router** — not a reply to the escalation.
 
+**"Sideways" means same altitude.** Behavior → behavior is sideways and is
+forbidden; implementation → behavior is one rung **up** and is allowed, and
+`skills/assign` names it as a route. This sentence exists because an audit on
+2026-08-16 read an upward edge as a sideways one and reported a defect that was
+not there. The direction is decided by the ladder above, never by the job title
+of the receiver — escalating to a reviewer is fine; a reviewer replying back
+down is not.
+
+**The escalation target is declared in the brief, not chosen by the sender.**
+A resource picking its own receiver is a dispatch decision the run graph never
+records. If the brief names no target, the escalation goes to the router as new
+work. See `docs/delegation.md`.
+
 ## 4. Independence before integration
 
 Two resources examining the same artifact must **not** see each other's output

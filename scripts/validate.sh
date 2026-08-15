@@ -88,6 +88,46 @@ for r in $registered; do
   grep -q "\`$r\`" README.md || fail "README.md: '$r' is in registry.yaml but appears nowhere in the README roster"
 done
 
+# 4f. Callsigns. The CTO's rule (2026-08-16) is that a callsign is a CHARACTER,
+#     that character is NOT HUMAN, and the name ENCODES THE JOB. "Non-human" is
+#     judgement and has no honest mechanical check — a deny-list of names would
+#     be brittle and would give false confidence, so it is deliberately not
+#     attempted. What IS checkable: the name exists, it is unique, and someone
+#     wrote the one-clause justification in the README. That last one does not
+#     check the rule; it checks that a human ARGUED the rule, which is the same
+#     shape as the gap-entry-required check above and is usually the better
+#     guard. The judgement half stays with roster-steward.
+callsigns=$(grep -E '^    callsign: ' registry.yaml | sed 's/.*callsign: //; s/#.*//' | sed 's/[[:space:]]*$//')
+n_cs=$(echo "$callsigns" | grep -c .)
+n_res_cs=$(echo "$registered" | wc -w | tr -d ' ')
+[[ "$n_cs" == "$n_res_cs" ]] || fail "registry.yaml: $n_res_cs resources but $n_cs callsigns — every resource needs one"
+while read -r dup; do
+  [[ -n "$dup" ]] && fail "registry.yaml: callsign '$dup' is used by more than one resource"
+done < <(echo "$callsigns" | sort | uniq -d)
+while read -r cs; do
+  [[ -z "$cs" ]] && continue
+  grep -q "\*\*$cs\*\*" README.md || fail "README.md: callsign '$cs' has no bolded one-clause justification in the name-encoding paragraph (skills/hire, 'The callsign rule')"
+done < <(echo "$callsigns")
+
+# 4g. Every resource has its OWN isolated brain source. Isolation is supposed to
+#     be mechanical (docs/memory.md), and it silently was not: a gbrain write to
+#     a source that does not exist lands in `default`, which is FEDERATED — so
+#     three resources' orientation notes went into the store every resource
+#     searches, and overwrote each other. Checked only where the brain actually
+#     exists; CI has no brain and must not fail on its absence.
+VT_BRAIN_HOME="${VT_BRAIN_HOME:-$HOME/.v-team/brain}"
+if [[ -d "$VT_BRAIN_HOME/.gbrain" ]] && command -v gbrain >/dev/null 2>&1; then
+  srcs=$(GBRAIN_HOME="$VT_BRAIN_HOME" GBRAIN_NO_RETRY_CONNECT=1 gbrain sources list 2>/dev/null \
+         | awk '$1!="SOURCES" && $1!~/^─/ {print $1}')
+  if [[ -n "$srcs" ]]; then
+    while read -r cs; do
+      [[ -z "$cs" ]] && continue
+      lc=$(echo "$cs" | tr '[:upper:]' '[:lower:]')
+      echo "$srcs" | grep -qx "$lc" || fail "brain: no isolated source '$lc' — that resource's memory writes fall through to the federated 'default' store (./scripts/setup-brain.sh)"
+    done < <(echo "$callsigns")
+  fi
+fi
+
 # 5. Autonomy is one of the three known values.
 while read -r a; do
   case "$a" in

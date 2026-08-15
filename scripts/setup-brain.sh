@@ -23,7 +23,17 @@ DIMS="${VT_EMBED_DIMS:-768}"
 
 # Callsign -> resource. The source id is the callsign: a store belongs to
 # someone, and `--source heimdall` reads better than `--source adversarial-reviewer`.
-STORES="hermione neo heimdall samwise alfred"
+#
+# DERIVED FROM registry.yaml, never hand-listed. It was a frozen list until
+# 2026-08-16, which is exactly how ariadne, marshal and janus ended up with no
+# store: setup-brain.sh created sources for the resources that existed the day
+# it ran, and nothing in the /hire path added one afterwards. Their orientation
+# notes fell through to `default` — which is FEDERATED, so every resource could
+# read them — and all three wrote the same slug, so two were overwritten and
+# lost. See ledger/escapes/2026-08-16-hire-path-no-brain-source.md.
+STORES="$(grep -E '^    callsign: ' "$ROOT/registry.yaml" \
+          | sed 's/.*callsign: //; s/#.*//' | tr -d ' ' | tr '[:upper:]' '[:lower:]' | tr '\n' ' ')"
+[[ -n "${STORES// }" ]] || { echo "no callsigns in registry.yaml — refusing to run"; exit 1; }
 
 case "${1:-setup}" in
   --status)
