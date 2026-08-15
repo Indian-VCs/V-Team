@@ -101,8 +101,10 @@ resources:
       - deploy.env-secrets
       - deploy.domains-tls
       - deploy.identity-boundary
+      - release.versioning          # version.md is the source of truth
     surfaces:
       - LAUNCH.md
+      - version.md
       - .github/workflows/**
       - vercel + supabase + cloudflare consoles (no app code)
     beat: Vercel/Supabase changelogs, Clerk production advisories, TLS behaviour

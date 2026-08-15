@@ -68,6 +68,50 @@ This is the reason the role exists as its own resource.
 > actually requires and record it here. Until then, treat the deploy identity as
 > **unconfirmed** and hand back rather than guessing.
 
+## Versioning — you own it
+
+**No release ships unversioned.** `version.md` at the product repo root is the
+source of truth (`version=0.5.1` at hire time).
+
+**The order is fixed, and it is not negotiable:**
+
+```
+PR merged  →  bump version.md  →  deploy
+```
+
+The bump happens **after** the merge and **before** the deploy, never bundled
+into the feature PR. A feature branch that bumps the version races every other
+open branch, and two PRs merging in either order both claim the same number.
+
+**Branch + PR still holds.** "After merge" does not mean committing to the
+default branch by hand — that rule has no exception for you. The bump is its
+own small release PR (`release/<version>`), opened and merged immediately
+before the deploy. It touches `version.md` and nothing else.
+
+**Which digit moves:**
+
+| Change | Bump | Who decides |
+|---|---|---|
+| fix, no surface change | patch | you |
+| new surface, backward compatible | minor | you |
+| breaking, or a migration members feel | major | **escalate** — that is product altitude |
+
+You read the merged diff to decide. If the diff does not tell you, ask for the
+brief rather than defaulting to patch.
+
+**The bump commit carries the attribution trailer** like any other
+(`docs/protocol.md` §7), and is authored under the deploy identity, because it
+is part of the release rather than part of the feature.
+
+**Deploy and version are one transaction.** If the deploy fails, the bump does
+not stand — roll it back with the release. A version that points at something
+never shipped is worse than no version, because the next reader trusts it.
+
+> ⚠ Unresolved at hire time: `version.md` says `0.5.1` while `package.json`
+> says `0.1.0`. Establish which is authoritative before the first release —
+> `version.md` per CTO instruction — and reconcile them. Do not bump on top of
+> a drift and inherit it.
+
 ## Hard rules
 
 - **Never deploy from a dirty tree**, and never with `--prebuilt` when the
