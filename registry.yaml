@@ -20,7 +20,8 @@ scope:
 
 resources:
   - name: content-auditor
-    persona: fact-checker              # alternates in personas/variants.md
+    persona: fact-checker       # alternates in personas/variants.md
+    callsign: Hermione          # opens the source before the copy
     altitude: behavior
     autonomy: recommend
     effort: default
@@ -39,6 +40,7 @@ resources:
 
   - name: tenant-visibility-tester
     persona: admin
+    callsign: Neo               # what the config claims vs what actually renders
     altitude: behavior
     autonomy: recommend
     effort: default
@@ -55,6 +57,7 @@ resources:
 
   - name: adversarial-reviewer
     persona: isolation-hawk
+    callsign: Heimdall          # watches the boundary between realms
     altitude: behavior
     autonomy: recommend
     effort: default                    # -> high on low-gate-coverage surfaces
@@ -71,6 +74,7 @@ resources:
 
   - name: implementer
     persona: conventions-first
+    callsign: Samwise           # dependable, follows the path, never improvises
     altitude: implementation
     autonomy: merge-on-green
     effort: low                        # escalates with task difficulty
@@ -86,7 +90,8 @@ resources:
       - introduces a pattern where one already exists
 
   - name: architect
-    persona: null                      # drafted after observing the other four
+    persona: null               # drafted after observing the other four
+    callsign: Alfred            # the whole picture, none of the authority
     altitude: product
     autonomy: recommend                # highest altitude, lowest autonomy
     effort: high
