@@ -13,6 +13,27 @@ fail() { echo "::error::$1"; status=1; }
 
 # 1. Every registered resource has a definition file.
 registered=$(grep -E '^  - name: ' registry.yaml | sed 's/.*name: //' | tr -d ' ')
+
+# One person per line, and its "role|callsign|autonomy" triple — the join
+# every later check needs now that callsign/persona/autonomy moved off the
+# resources: row and onto people: (docs/org-model.md, stage 1+2, shipped
+# atomically because stage 1 alone seeds an axis no guard here could see).
+# Block-scoped to `people:` specifically: `retired_callsigns:` uses the exact
+# same "  - callsign: " shape and a file-wide grep would silently mix live
+# people with dead names.
+person_rows=$(awk '
+  /^people:/  { inb=1; next }
+  /^[a-z_]+:/ { inb=0 }
+  inb && /^  - callsign: / {
+    if (c != "") print c "|" r "|" a
+    c=$0; sub(/^  - callsign: /,"",c); sub(/[[:space:]]*#.*/,"",c); gsub(/[[:space:]]*$/,"",c); r=""; a=""
+  }
+  inb && /^    role: /     { r=$0; sub(/^    role: /,"",r);     sub(/[[:space:]]*#.*/,"",r); gsub(/[[:space:]]*$/,"",r) }
+  inb && /^    autonomy: / { a=$0; sub(/^    autonomy: /,"",a); sub(/[[:space:]]*#.*/,"",a); gsub(/[[:space:]]*$/,"",a) }
+  END { if (c != "") print c "|" r "|" a }
+' registry.yaml)
+callsigns=$(echo "$person_rows" | cut -d'|' -f1)
+roles_of_people=$(echo "$person_rows" | cut -d'|' -f2)
 for r in $registered; do
   [[ -f "resources/$r.md" ]] || fail "registry.yaml declares '$r' but resources/$r.md does not exist"
 done
@@ -74,36 +95,52 @@ while read -r alt; do
   esac
 done < <(grep -E '^    altitude: ' registry.yaml | sed 's/.*altitude: //; s/#.*//' | tr -d ' ')
 
-# 4e. README headcount matches the registry. The roster drifted once already —
-#     design-reviewer was registered, defined and absent from the README table.
-#     Nothing caught it, so now something does.
+# 4e. README headcount matches the registry — on BOTH axes now. The roster
+#     drifted once already (design-reviewer registered, defined, absent from
+#     the README table) and the org model added a second number that can drift
+#     independently: roles can outnumber people, or vice versa, the moment a
+#     role goes unstaffed or gains a second person.
 n_res=$(echo "$registered" | wc -w | tr -d ' ')
-n_readme=$(grep -oE '\*\*Headcount: [0-9]+ resources' README.md | grep -oE '[0-9]+' | head -1)
-if [[ -z "$n_readme" ]]; then
-  fail "README.md: no '**Headcount: N resources' line to check against the registry"
-elif [[ "$n_readme" != "$n_res" ]]; then
-  fail "README.md claims $n_readme resources but registry.yaml declares $n_res"
+n_people=$(echo "$callsigns" | grep -c .)
+readme_line=$(grep -oE '\*\*Headcount: [0-9]+ roles?, [0-9]+ people' README.md | head -1)
+if [[ -z "$readme_line" ]]; then
+  fail "README.md: no '**Headcount: N roles, M people' line to check against the registry"
+else
+  n_readme_roles=$(echo "$readme_line" | grep -oE '[0-9]+ roles?' | grep -oE '[0-9]+')
+  n_readme_people=$(echo "$readme_line" | grep -oE '[0-9]+ people' | grep -oE '[0-9]+')
+  [[ "$n_readme_roles" == "$n_res" ]] || fail "README.md claims $n_readme_roles roles but registry.yaml declares $n_res"
+  [[ "$n_readme_people" == "$n_people" ]] || fail "README.md claims $n_readme_people people but registry.yaml declares $n_people"
 fi
 for r in $registered; do
   grep -q "\`$r\`" README.md || fail "README.md: '$r' is in registry.yaml but appears nowhere in the README roster"
 done
 
 # 4f. Callsigns. The CTO's rule (2026-08-16) is that a callsign is a CHARACTER,
-#     that character is NOT HUMAN, and the name ENCODES THE JOB. "Non-human" is
-#     judgement and has no honest mechanical check — a deny-list of names would
-#     be brittle and would give false confidence, so it is deliberately not
-#     attempted. What IS checkable: the name exists, it is unique, and someone
-#     wrote the one-clause justification in the README. That last one does not
-#     check the rule; it checks that a human ARGUED the rule, which is the same
-#     shape as the gap-entry-required check above and is usually the better
-#     guard. The judgement half stays with roster-steward.
-callsigns=$(grep -E '^    callsign: ' registry.yaml | sed 's/.*callsign: //; s/#.*//' | sed 's/[[:space:]]*$//')
+#     that character is NOT HUMAN, and the name ENCODES THE JOB — amended
+#     2026-08-17 (docs/org-model.md): the job, when the role has one person,
+#     or the PERSONA, when it has several. "Non-human" is judgement and has no
+#     honest mechanical check — a deny-list of names would be brittle and give
+#     false confidence, so it is deliberately not attempted. What IS checkable:
+#     the name exists on `people:`, it is unique across `people:` AND
+#     `retired_callsigns:` (4i, below, shares `$callsigns`), every role has at
+#     least one person, every person names a real role, and someone wrote the
+#     one-clause justification in the README. That last one does not check the
+#     rule; it checks that a human ARGUED it, which is the same shape as the
+#     gap-entry-required check above and is usually the better guard. The
+#     judgement half stays with roster-steward.
 n_cs=$(echo "$callsigns" | grep -c .)
-n_res_cs=$(echo "$registered" | wc -w | tr -d ' ')
-[[ "$n_cs" == "$n_res_cs" ]] || fail "registry.yaml: $n_res_cs resources but $n_cs callsigns — every resource needs one"
+n_people=$(echo "$roles_of_people" | grep -c .)
+[[ "$n_cs" == "$n_people" ]] || fail "registry.yaml: $n_people people but $n_cs callsigns — every person needs exactly one"
 while read -r dup; do
-  [[ -n "$dup" ]] && fail "registry.yaml: callsign '$dup' is used by more than one resource"
+  [[ -n "$dup" ]] && fail "registry.yaml: callsign '$dup' is used by more than one person"
 done < <(echo "$callsigns" | sort | uniq -d)
+for r in $registered; do
+  echo "$roles_of_people" | grep -qx "$r" || fail "registry.yaml: role '$r' has no person in people: — every role needs at least one"
+done
+while read -r ro; do
+  [[ -z "$ro" ]] && continue
+  echo "$registered" | grep -qx "$ro" || fail "registry.yaml: a people: entry names role '$ro', which is not a registered resource"
+done < <(echo "$roles_of_people")
 while read -r cs; do
   [[ -z "$cs" ]] && continue
   grep -q "\*\*$cs\*\*" README.md || fail "README.md: callsign '$cs' has no bolded one-clause justification in the name-encoding paragraph (skills/hire, 'The callsign rule')"
@@ -159,11 +196,7 @@ while read -r pair; do
     || grep -qF -- "clients/$lc_cs" <<<"$flat" \
     || grep -qF -- "vteam-brain-$lc_cs" <<<"$flat" \
     || fail "$f: never names its own brain store '$lc_cs' — expected one of 'mcp__vteam-brain-$lc_cs__*', '~/.v-team/clients/$lc_cs', or '--source $lc_cs'. The store id is the callsign lowercased, and a mismatch sends this resource's memory into the federated 'default' store instead of erroring (docs/memory.md)"
-done < <(awk '
-  /^  - name: /     { r=$0; sub(/^  - name: /,"",r); gsub(/[[:space:]]/,"",r) }
-  /^    callsign: / { c=$0; sub(/^    callsign: /,"",c); sub(/#.*/,"",c); gsub(/[[:space:]]/,"",c);
-                      if (r != "") { print r "|" c; r="" } }
-' registry.yaml)
+done < <(echo "$person_rows" | awk -F'|' '{print $2 "|" $1}')
 
 # 4i. The retired-callsign alias table stays resolvable. A trailer is never
 #     rewritten, so every retired callsign is permanently in history and
@@ -259,25 +292,65 @@ if [[ -d "$VT_BRAIN_HOME/.gbrain" ]]; then
   fi
 fi
 
-# 5. Autonomy is one of the three known values.
+# 5. Autonomy is one of the three known values — on BOTH axes now: a person's
+#    own level (`autonomy:`, on people:) and their role's ceiling
+#    (`autonomy_ceiling:`, on resources:). docs/org-model.md, stage 2.
 while read -r a; do
   case "$a" in
     recommend|branch|merge-on-green) ;;
     *) fail "registry.yaml: unknown autonomy '$a' (expected recommend | branch | merge-on-green)" ;;
   esac
 done < <(grep -E '^    autonomy: ' registry.yaml | sed 's/.*autonomy: //; s/#.*//' | tr -d ' ')
+while read -r a; do
+  case "$a" in
+    recommend|branch|merge-on-green) ;;
+    *) fail "registry.yaml: unknown autonomy_ceiling '$a' (expected recommend | branch | merge-on-green)" ;;
+  esac
+done < <(grep -E '^    autonomy_ceiling: ' registry.yaml | sed 's/.*autonomy_ceiling: //; s/#.*//' | tr -d ' ')
 
-# 6. A new or changed resource must start at recommend — probation is not
-#    optional. Enforced only against the base ref in CI, where it is knowable.
+# 4k. A person may not exceed their role's ceiling — autonomy_ceiling is the
+#     most anyone in that job may ever hold (docs/org-model.md). Numbered 4k
+#     rather than appended after 7: it belongs beside 4f/4h, which is where a
+#     reader looking for "what does validate.sh say about people:" will look.
+vt_autonomy_rank() { case "$1" in recommend) echo 0 ;; branch) echo 1 ;; merge-on-green) echo 2 ;; *) echo -1 ;; esac; }
+while IFS='|' read -r cs role aut; do
+  [[ -z "$cs" ]] && continue
+  ceiling=$(awk "/^  - name: $role\$/,/^\$/" registry.yaml | grep -m1 '^    autonomy_ceiling: ' | sed 's/.*autonomy_ceiling: //; s/[[:space:]]*#.*//' | sed 's/[[:space:]]*$//')
+  if [[ -z "$ceiling" ]]; then
+    fail "registry.yaml: role '$role' (person '$cs') declares no autonomy_ceiling"
+    continue
+  fi
+  p_rank=$(vt_autonomy_rank "$aut"); c_rank=$(vt_autonomy_rank "$ceiling")
+  if (( p_rank > c_rank )); then
+    fail "registry.yaml: '$cs' holds autonomy '$aut', above role '$role''s ceiling '$ceiling' — nobody may exceed their role's ceiling"
+  fi
+done <<< "$person_rows"
+
+# 6. A NEW person must start at recommend — probation is not optional.
+#    "New" means: this callsign did not exist ANYWHERE in the base ref's
+#    registry.yaml — not as a role-row callsign (the pre-migration shape),
+#    not already on people:, not retired. That is the mechanical form of
+#    stage 1's one exemption (docs/org-model.md): the eight rows this
+#    migration seeds carry forward an autonomy that already existed, they are
+#    not granted one, and the check has to know the difference or it would
+#    block its own migration. Enforced only against the base ref in CI, where
+#    it is knowable.
 if [[ -n "${GITHUB_BASE_REF:-}" ]]; then
-  changed=$(git diff --name-only "origin/$GITHUB_BASE_REF"...HEAD -- resources/ || true)
-  for f in $changed; do
-    n="$(basename "$f" .md)"
-    aut=$(awk "/^  - name: $n\$/,/^  - name: /" registry.yaml | grep -m1 '^    autonomy: ' | sed 's/.*autonomy: //; s/#.*//' | tr -d ' ')
-    if [[ -n "$aut" && "$aut" != "recommend" ]]; then
-      fail "$f changed but '$n' has autonomy '$aut' — a changed resource re-enters probation at 'recommend' (docs/charter.md)"
-    fi
-  done
+  base_registry=$(git show "origin/$GITHUB_BASE_REF:registry.yaml" 2>/dev/null || true)
+  if [[ -n "$base_registry" ]]; then
+    base_known_callsigns=$(
+      { grep -E '^    callsign: ' <<<"$base_registry"                                    # pre-migration: on resources:
+        awk '/^people:/{i=1;next} /^[a-z_]+:/{i=0} i&&/^  - callsign: /' <<<"$base_registry"  # already on people:
+        awk '/^retired_callsigns:/{i=1;next} /^[a-z_]+:/{i=0} i&&/^  - callsign: /' <<<"$base_registry"
+      } | sed 's/.*callsign: //; s/[[:space:]]*#.*//' | sed 's/[[:space:]]*$//'
+    )
+    while IFS='|' read -r cs role aut; do
+      [[ -z "$cs" ]] && continue
+      grep -qxF "$cs" <<<"$base_known_callsigns" && continue   # existed before — carried over, exempt
+      [[ "$aut" == "recommend" ]] \
+        || fail "registry.yaml: '$cs' is a new person (role '$role') but starts at '$aut' — every new person starts at recommend, no exceptions (docs/org-model.md)"
+    done <<< "$person_rows"
+  fi
 
   # 7. A hire is evidence or it is not a hire. A PR that adds a resource must
   #    add the ledger/gaps/ entry recording every /hire check and its answer —
@@ -291,5 +364,5 @@ if [[ -n "${GITHUB_BASE_REF:-}" ]]; then
   fi
 fi
 
-[[ $status -eq 0 ]] && echo "registry valid: $(echo "$registered" | wc -w | tr -d ' ') resources"
+[[ $status -eq 0 ]] && echo "registry valid: $(echo "$registered" | wc -w | tr -d ' ') roles, $(echo "$callsigns" | grep -c .) people"
 exit $status

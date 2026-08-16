@@ -72,8 +72,11 @@ without changing anything else.
 
 ## The V-Team
 
-**Headcount: 8 resources across 7 departments.** One product staffed
-(prism-platform); the other five are dormant and staffed on need.
+**Headcount: 8 roles, 8 people across 7 departments.** One person per role
+today — `registry.yaml` gained a `people:` axis on 2026-08-17
+(`docs/org-model.md`) so a role can hold more than one, but nobody has been
+hired yet. One product staffed (prism-platform); the other five are dormant
+and staffed on need.
 
 | Callsign | Resource | Dept | Persona | Altitude | Autonomy |
 |---|---|---|---|---|---|

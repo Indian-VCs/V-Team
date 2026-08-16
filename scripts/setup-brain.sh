@@ -44,9 +44,18 @@ VT_MCP_PORT="${VT_MCP_PORT:-7433}"
 # notes fell through to `default` — which is FEDERATED, so every resource could
 # read them — and all three wrote the same slug, so two were overwritten and
 # lost. See ledger/escapes/2026-08-16-hire-path-no-brain-source.md.
-STORES="$(grep -E '^    callsign: ' "$ROOT/registry.yaml" \
-          | sed 's/.*callsign: //; s/#.*//' | tr -d ' ' | tr '[:upper:]' '[:lower:]' | tr '\n' ' ')"
-[[ -n "${STORES// }" ]] || { echo "no callsigns in registry.yaml — refusing to run"; exit 1; }
+#
+# Callsign moved from a `resources:` row to `people:` in docs/org-model.md's
+# migration (stage 1+2) — a store belongs to a PERSON, which is what the field
+# meant all along. Block-scoped to `people:` specifically: `retired_callsigns:`
+# uses the identical "  - callsign: " shape, and a file-wide grep would try to
+# mint tokens for six dead names on every run.
+STORES="$(awk '
+  /^people:/  { inb=1; next }
+  /^[a-z_]+:/ { inb=0 }
+  inb && /^  - callsign: / { c=$0; sub(/^  - callsign: /,"",c); sub(/[[:space:]]*#.*/,"",c); gsub(/[[:space:]]*$/,"",c); print c }
+' "$ROOT/registry.yaml" | tr '[:upper:]' '[:lower:]' | tr '\n' ' ')"
+[[ -n "${STORES// }" ]] || { echo "no callsigns in registry.yaml people: — refusing to run"; exit 1; }
 
 case "${1:-setup}" in
   --status)

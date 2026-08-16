@@ -1,13 +1,30 @@
-# Resource registry — the skills matrix.
+# Resource registry — the skills matrix, now on two axes.
 #
-# The router reads this to answer one question: is there a resource that can
-# do what was asked? If not, it says so and names the missing capability
-# rather than assigning the work to a near-fit.
+# TWO BLOCKS, TWO OWNERS. `docs/org-model.md` is the ruling; this is stage
+# 1+2 of its migration, shipped atomically (stage 1 alone seeds an axis no
+# guard can see; stage 2 cannot land without stage 1's data already present).
 #
-# Altitude  = which question the resource may answer
+#   resources:  the JOB. Capability, altitude, surfaces, refusals, the
+#               autonomy CEILING. One row per ROLE — unchanged in count today
+#               (8), and this is what /assign matches against.
+#   people:     the PERSON. Callsign, persona, own autonomy, hire date. One
+#               row per role today (8/8) — nobody is hired or renamed by this
+#               file. A role may have MANY people; a person has exactly one
+#               live agent (protocol §6).
+#
+# The router reads `resources:` to answer one question: is there a resource
+# that can do what was asked? If not, it says so and names the missing
+# capability rather than assigning the work to a near-fit.
+#
+# Altitude  = which question the ROLE may answer (resources:)
 #             implementation -> behavior -> product
-# Autonomy  = what it may do without approval
+# Autonomy_ceiling = the most anyone in this ROLE may ever hold (resources:)
 #             recommend | branch | merge-on-green
+# Autonomy  = what this PERSON may do without approval, today (people:)
+#             recommend | branch | merge-on-green — must be <= their role's
+#             autonomy_ceiling. Every NEW person starts at recommend; the
+#             one exemption is stage 1 itself, carrying over what already
+#             existed rather than granting anything.
 # Terminal  = `escalation.terminal.<object>`. TERMINAL IS A PROPERTY OF THE
 #             PAIR (resource, object), NEVER OF A RESOURCE ALONE. There is no
 #             ordering between the two ids and neither outranks the other:
@@ -17,15 +34,24 @@
 #             was one id, which read as a rank and made README and registry
 #             contradict each other. See docs/delegation.md.
 # Callsign  = a CHARACTER, and that character is NOT HUMAN, and the name
-#             ENCODES THE JOB well enough to defend in one clause (the comment
-#             beside it IS that clause). CTO rule, 2026-08-16. roster-steward
-#             is the last check before a name becomes permanent — a callsign
-#             lands in commit trailers and merged ledger entries, which are
-#             never rewritten. See skills/hire "Placement".
-# Effort    = selected by TASK DIFFICULTY, not by identity. The value here is
-#             the resource's default; the router overrides it per task.
-#             Difficulty is defined as inverse gate coverage — see
-#             docs/difficulty.md.
+#             ENCODES THE JOB when the role has one person, or the PERSONA
+#             when it has several — defensible in one clause either way (the
+#             comment beside it IS that clause). CTO rule 2026-08-16, amended
+#             2026-08-17 for many-people-per-role (docs/org-model.md). Lives on
+#             `people:` — it is the unit of address and of attribution, and a
+#             role is never addressed directly. roster-steward is the last
+#             check before a name becomes permanent — a callsign lands in
+#             commit trailers and merged ledger entries, which are never
+#             rewritten. See skills/hire "Placement".
+# Effort    = selected by TASK DIFFICULTY, not by identity — a ROLE property,
+#             never a person's, on purpose (docs/org-model.md: a deliberately
+#             weaker person is pure loss, and per-person effort builds a
+#             self-certifying seniority trap). The value here is the role's
+#             default; the router overrides it per task. Difficulty is defined
+#             as inverse gate coverage — see docs/difficulty.md.
+# Since     = when this PERSON took the role. For the eight stage-1 rows this
+#             is the role's real hire date (git history), not today — seeding
+#             is lossless, not a re-hire.
 
 version: 1
 scope:
@@ -34,10 +60,8 @@ scope:
 
 resources:
   - name: content-auditor
-    persona: fact-checker       # alternates in personas/variants.md
-    callsign: Mimir              # the well the truth comes from — drink at the source
     altitude: behavior
-    autonomy: recommend
+    autonomy_ceiling: recommend
     effort: default
     capabilities:
       - content.audit.factual
@@ -53,10 +77,8 @@ resources:
       - passes a figure it could not trace to a source
 
   - name: tenant-visibility-tester
-    persona: admin
-    callsign: Argus              # a hundred eyes; believes only what they actually see
     altitude: behavior
-    autonomy: recommend
+    autonomy_ceiling: recommend
     effort: default
     capabilities:
       - test.tenant-visibility
@@ -70,10 +92,8 @@ resources:
       - accepts "it's enabled in config" as evidence
 
   - name: adversarial-reviewer
-    persona: isolation-hawk
-    callsign: Heimdall           # watches the boundary between realms
     altitude: behavior
-    autonomy: recommend
+    autonomy_ceiling: recommend
     effort: default                    # -> high on low-gate-coverage surfaces
     capabilities:
       - code.review
@@ -87,10 +107,8 @@ resources:
       - approves; it only refutes or finds nothing
 
   - name: implementer
-    persona: conventions-first
-    callsign: Samwise            # dependable, follows the path, never improvises
     altitude: implementation
-    autonomy: merge-on-green
+    autonomy_ceiling: merge-on-green
     effort: low                        # escalates with task difficulty
     capabilities:
       - code.implement
@@ -104,10 +122,8 @@ resources:
       - introduces a pattern where one already exists
 
   - name: design-reviewer
-    persona: wayfinder
-    callsign: Bagheera           # knows every path, shows the one you can actually take
     altitude: behavior
-    autonomy: recommend                # probation
+    autonomy_ceiling: recommend                # probation
     effort: high
     capabilities:
       - design.visual
@@ -127,10 +143,8 @@ resources:
       - runs `npm run test:e2e`
 
   - name: deployment-engineer
-    persona: release-marshal
-    callsign: Cerberus           # stands at the gate; nothing ships past it unchecked
     altitude: behavior
-    autonomy: recommend                # probation — deploy earns trust slowly
+    autonomy_ceiling: recommend                # probation — deploy earns trust slowly
     effort: high
     capabilities:
       - deploy.production
@@ -155,10 +169,8 @@ resources:
       - sets ALLOW_DESTRUCTIVE_DB against a non-localhost database
 
   - name: roster-steward
-    persona: evidence-clerk
-    callsign: Anubis             # weighs each one against the standard, hands the verdict up
     altitude: product
-    autonomy: recommend                # probation — and it enforces probation
+    autonomy_ceiling: recommend                # probation — and it enforces probation
     effort: high
     capabilities:
       - team.hire
@@ -192,10 +204,8 @@ resources:
       - audits its own definition
 
   - name: architect
-    persona: null               # drafted after observing the other four
-    callsign: Jarvis             # sees every system at once, gives orders to no one
     altitude: product
-    autonomy: recommend                # highest altitude, lowest autonomy
+    autonomy_ceiling: recommend                # highest altitude, lowest autonomy
     effort: high
     capabilities:
       - product.impact
@@ -207,6 +217,65 @@ resources:
     never:
       - decides
       - merges
+
+# The people. One row per `role:` id above — 8/8 today, and this is STAGE 1 of
+# docs/org-model.md's migration: seed losslessly, rename nobody, hire nobody.
+# `since:` is the role's REAL hire date (git history of resources/<role>.md's
+# first commit), not today's date — this is a data-model move, not a re-hire.
+#
+# `autonomy` here is EXEMPT from the "every new person starts at recommend"
+# rule (validate.sh 6) for exactly these eight rows: none of them is new, each
+# is carrying forward the autonomy its role already held on the row above
+# before this migration moved it. A person added to this list in any LATER
+# change is not exempt and must start at `recommend`.
+people:
+  - callsign: Mimir              # the well the truth comes from — drink at the source
+    role: content-auditor
+    persona: fact-checker       # alternates in personas/variants.md
+    autonomy: recommend
+    since: 2026-08-15
+
+  - callsign: Argus              # a hundred eyes; believes only what they actually see
+    role: tenant-visibility-tester
+    persona: admin
+    autonomy: recommend
+    since: 2026-08-15
+
+  - callsign: Heimdall           # watches the boundary between realms
+    role: adversarial-reviewer
+    persona: isolation-hawk
+    autonomy: recommend
+    since: 2026-08-15
+
+  - callsign: Samwise            # dependable, follows the path, never improvises
+    role: implementer
+    persona: conventions-first
+    autonomy: merge-on-green      # L3 — carried over, not granted
+    since: 2026-08-15
+
+  - callsign: Bagheera           # knows every path, shows the one you can actually take
+    role: design-reviewer
+    persona: wayfinder
+    autonomy: recommend                # probation
+    since: 2026-08-16
+
+  - callsign: Cerberus           # stands at the gate; nothing ships past it unchecked
+    role: deployment-engineer
+    persona: release-marshal
+    autonomy: recommend                # probation — deploy earns trust slowly
+    since: 2026-08-16
+
+  - callsign: Anubis             # weighs each one against the standard, hands the verdict up
+    role: roster-steward
+    persona: evidence-clerk
+    autonomy: recommend                # probation — and it enforces probation
+    since: 2026-08-16
+
+  - callsign: Jarvis             # sees every system at once, gives orders to no one
+    role: architect
+    persona: null               # drafted after observing the other four
+    autonomy: recommend                # highest altitude, lowest autonomy
+    since: 2026-08-15
 
 # Callsigns that were real and are no longer. A trailer is never rewritten, so
 # every one of these is permanently in history and `record.sh` must be able to

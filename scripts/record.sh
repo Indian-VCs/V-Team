@@ -56,7 +56,9 @@ source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 ONLY="${1:-}"; PRINT=""
 [[ "$ONLY" == "--print" ]] && { PRINT=1; ONLY=""; }
 
-callsign_of() { vt_field "$1" callsign | tr '[:upper:]' '[:lower:]'; }
+# Callsign lives on people: now (docs/org-model.md); vt_callsign_of_role joins
+# a role back to whoever holds it.
+callsign_of() { vt_callsign_of_role "$1" | tr '[:upper:]' '[:lower:]'; }
 
 # --- trailer corpus ----------------------------------------------------------
 # Read once, for every repo the team ships into: this one, plus each product
@@ -187,7 +189,10 @@ no checkout found, so any work landed there is missing from these counts."
 not a clean record, it is an unread one — do not argue a promotion from it.'
   fi
 
-  altitude="$(vt_field "$r" altitude)"; autonomy="$(vt_field "$r" autonomy | sed 's/ *#.*//')"
+  # Altitude is the ROLE's; autonomy is THIS PERSON's own level, not the
+  # role's ceiling — docs/org-model.md put them on different axes precisely
+  # so trusting one person does not read as trusting the whole role.
+  altitude="$(vt_field "$r" altitude)"; autonomy="$(vt_person_field "$cs" autonomy | sed 's/ *#.*//')"
   beat_age=$(vt_stamp_age_hours "beat-$r")
   last_beat="never"; (( beat_age < 99999 )) && last_beat="${beat_age}h ago"
 
