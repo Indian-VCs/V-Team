@@ -47,6 +47,17 @@ is **inverse gate coverage** — see `docs/difficulty.md` for the surface map.
 **Bias up.** Over-tiering costs tokens. Under-tiering costs a production
 incident on a platform with real users. Those are not comparable losses.
 
+**Write the resolved effort into the brief** (step 5), beside the
+done-condition and the budget. This step was already here and correct on
+2026-08-17, and every dispatch that day ran on the session model with no
+override — `implementer` is declared `effort: low` and produced the two longest
+runs of the day. **The defect was not a missing rule; it was an unexecuted one,
+and nothing recorded the omission.** Putting the resolved value in the brief is
+the only place it becomes visible at all. Effort is a property of the **work**
+and never of the worker: a new L1 person on a hard task gets `high` and then
+*recommends* rather than merges — seniority governs authority, never how much
+thinking a task gets (`docs/org-model.md`).
+
 ### 4. Check the dependency graph before dispatching
 
 Three kinds, and only one is solved by ordering:
@@ -91,6 +102,8 @@ And two things it cannot start without:
   "when it looks right."
 - **the budget** — turns or tokens, and the instruction to hand back partial
   work on exhaustion rather than continuing silently.
+- **the effort**, resolved in step 3 from the task's difficulty — not copied
+  from the resource's declared default, which is only the prior.
 
 Missing termination conditions sit in the largest measured failure category
 (specification and design, 41.8%). A resource that does not know when to stop
@@ -102,11 +115,21 @@ either loops or stops early, and both look like completion from outside.
 spawn. One place holds the run graph, or the shared-resource collisions become
 invisible.
 
-**Run as many instances of a role as there is work for — that is staffing, and
-it is correct** (`protocol.md` §6). What you may not do is send the gate for a
-PR back to the instance that authored it. Different run id, or a different
-resource; never the same run reviewing itself. Cloning makes that collapse
-invisible, because both sides of it log under one name.
+**One person, one live agent. Never clone a person** (`protocol.md` §6, CTO
+ruling 2026-08-17). This **reverses** what this step said until today, which was
+to run as many instances of a role as there is work for.
+
+- A person may hold several tasks at once — **in the same context**. More work
+  for a busy person is more work in that context, never a second copy.
+- Out of people? That is a **hiring signal**, not a spawning one. Report it as
+  capacity and hand it to `/hire`; do not manufacture a second Samwise.
+- Never send the gate for a PR back to the person who authored it. **Different
+  person** — not a different run of the same one.
+
+**Nothing checks this.** No artifact records which people are live
+(`ledger/runs/` was deleted 2026-08-16), so this step is honoured by hand. If
+you catch yourself dispatching a callsign that is already working, that is the
+rule firing — there is nothing else to fire.
 
 **Give every instance its own `V-Team-Run` id, and take the trailer from
 `registry.yaml`.** On 2026-08-16 three concurrent `implementer` instances each
