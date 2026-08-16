@@ -208,6 +208,69 @@ resources:
       - decides
       - merges
 
+# Callsigns that were real and are no longer. A trailer is never rewritten, so
+# every one of these is permanently in history and `record.sh` must be able to
+# resolve it — an unresolvable callsign silently credits nobody, which is the
+# same silent-zero shape that has bitten this repo three times.
+#
+# THE MAP IS callsign -> RESOURCE ID, NEVER callsign -> callsign. Resource ids
+# are stable; callsigns are exactly the thing that changes. `Neo -> Argus` would
+# break the day `tenant-visibility-tester` is renamed again and would need a
+# migration; `Neo -> tenant-visibility-tester` resolves through the roster above
+# and survives every future rename untouched. That is the whole design
+# requirement.
+retired_callsigns:
+  - callsign: Neo
+    resource: tenant-visibility-tester
+    retired: 2026-08-16
+    why: human character (The Matrix) — failed the species test
+  - callsign: Hermione
+    resource: content-auditor
+    retired: 2026-08-16
+    why: human character (Harry Potter)
+  - callsign: Alfred
+    resource: architect
+    retired: 2026-08-16
+    why: human character (Batman)
+  - callsign: Ariadne
+    resource: design-reviewer
+    retired: 2026-08-16
+    why: human character (Greek myth / Inception)
+  - callsign: Marshal
+    resource: deployment-engineer
+    retired: 2026-08-16
+    why: a rank, not a character
+  - callsign: Janus
+    resource: roster-steward
+    retired: 2026-08-16
+    why: compliant, but the name did not encode the job
+
+# Runs whose commit trailers name a callsign that did NOT do the work. This is
+# a DIFFERENT FACT from a rename and is deliberately not merged into the table
+# above: `retired_callsigns` says who a name used to belong to, and it must stay
+# true, or genuine pre-rename commits get miscredited. `Marshal` proves the
+# distinction is not theoretical — it has real `deployment-engineer` commits in
+# master, so `Marshal -> deployment-engineer` has to keep meaning that.
+#
+# Keyed by RUN ID, not by commit sha: the run identifies the dispatch, one
+# entry covers every commit it produced, and it keeps covering them if the
+# branch is rebased and the shas change. Five commits are covered by the two
+# entries below.
+#
+# This corrects the record; it does not rewrite it. The trailers stay as they
+# are (CTO: "leave the older commits, don't touch those") and these branches
+# merged with them in place — rewriting under live worktrees was judged high
+# risk for low return.
+misattributed_runs:
+  - run: 2026-08-16-public-workspace-landing-redesign
+    trailer_says: Neo
+    actual_resource: implementer
+    note: router wrote the trailer from memory instead of registry.yaml; 2 commits
+  - run: 2026-08-16-clerk-satellite-domains
+    trailer_says: Neo
+    actual_resource: implementer
+    note: same dispatch error, same day; 3 commits
+
 # Capabilities nobody currently covers. The router surfaces these by name when
 # a request needs one. This list is the hiring backlog — see skills/hire.
 known_gaps:
