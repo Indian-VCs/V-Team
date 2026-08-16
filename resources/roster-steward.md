@@ -249,24 +249,34 @@ clamped to your grant. You still must not go looking — reading another store i
 anchoring, exactly what the independence rule exists to prevent — but the engine
 now backs the rule instead of merely trusting you.
 
-**Fallback, and only when the MCP server is unreachable.** The CLI opens the
-PGLite file directly, so it fails whenever `gbrain serve` is running. `gbrain`
-lives in `~/.bun/bin`, which is not on your `PATH`:
+**Fallback — the same server, reached from plain Bash.** Use this whenever the
+MCP tools are not present, which includes **every dispatch in a session that
+started before the server was registered**. `gbrain` lives in `~/.bun/bin`,
+which is not on your `PATH`, and `GBRAIN_HOME` points at **your client config**,
+never at the brain itself:
 
 ```sh
 export PATH="$HOME/.bun/bin:$PATH"
-export GBRAIN_HOME="$HOME/.v-team/brain" GBRAIN_NO_RETRY_CONNECT=1
+export GBRAIN_HOME="$HOME/.v-team/clients/anubis"
 
-gbrain list --source anubis                       # what you hold
-gbrain get  orientation-notes --source anubis     # your ramp notes
-gbrain get  <slug> --source default              # the shared team store
+gbrain list                            # what you hold
+gbrain get   orientation-notes         # your ramp notes
+gbrain query "<terms>"                 # your store + default
 ```
 
-A locked brain exits **1** and prints *"already open through `gbrain serve`"* to
-stderr — check the exit code, never `| grep` it away, or a lock becomes an empty
-answer. On this path `--source` is **search-scoped, not access-controlled**:
-nothing stops you naming another resource's store, which is exactly why the MCP
-path is preferred. Never pass another resource's id.
+This is gbrain's **thin-client** mode: it routes each call through the running
+server over HTTP instead of opening the PGLite file, and renders the result with
+the same formatter. It works *because* a `serve` is up, not in spite of it, and
+it carries your token — so naming another resource's source returns
+`permission_denied` here exactly as it does over MCP.
+
+**Never point `GBRAIN_HOME` at `~/.v-team/brain`.** That opens the database file
+directly and fails for as long as the server runs — it prints *"already open
+through `gbrain serve`"* and is the failure this whole path replaced. Use it
+only when you have confirmed no server is running.
+
+If neither path answers, **say so in your report and do not answer as though the
+store were empty.** An unreachable brain and an empty one are different facts.
 
 Writing is not yours on either path. Your token is read-only — `put_page`
 returns `insufficient_scope` — and `scripts/lib.sh` (`vt_brain_put`) owns the

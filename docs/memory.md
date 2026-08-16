@@ -351,23 +351,47 @@ no `source_id`) exists for the write path, and it reads **every** store — chec
 *that* token for a resource would collapse isolation completely while looking
 identical in `claude mcp list`. Per-resource clients only; never the shared one.
 
-### Fallback: the CLI
+### Fallback: the CLI as a thin client of the same server
 
-Unchanged, and now explicitly second choice — it opens the PGLite file directly,
-so it fails whenever `serve` is running:
+**This is the path that works in a session that is already running**, and that
+is not a small caveat: a registration only reaches a *new* session, so every
+resource dispatched from a session that started earlier has no MCP tools at all.
+Before this existed, that case had **no working path** — tools absent on one
+side, a locked file on the other — which is precisely how Jarvis came to rule on
+a production PR with no memory.
+
+`GBRAIN_HOME` points at the resource's **client config**, not at the brain:
 
 ```sh
 export PATH="$HOME/.bun/bin:$PATH"
-export GBRAIN_HOME="$HOME/.v-team/brain" GBRAIN_NO_RETRY_CONNECT=1
+export GBRAIN_HOME="$HOME/.v-team/clients/heimdall"
 
-gbrain list   --source heimdall
-gbrain get    orientation-notes --source heimdall
-gbrain get    <slug> --source default            # the shared team store
-gbrain sources list
+gbrain list                            # what that resource holds
+gbrain get   orientation-notes
+gbrain query "<terms>"                 # its store + default
 ```
 
-`scripts/lib.sh` `vt_brain()` / `vt_brain_put()` wrap the same recipe for
-scripts, and are the only sanctioned write path.
+Each `~/.v-team/clients/<callsign>/.gbrain/config.json` carries a `remote_mcp`
+block — gbrain's built-in **thin-client** mode. The CLI dispatches each shared
+op to the running server over HTTP and renders the reply with the same formatter
+the local path uses, so output is identical and only the transport changes. It
+uses the same OAuth client as that resource's MCP registration, so the grant and
+the denials are the same: naming another store returns `permission_denied`.
+
+Verified 2026-08-17, with `serve --http` holding the lock:
+
+```
+$ GBRAIN_HOME=~/.v-team/brain    gbrain get orientation-notes --source samwise
+GBrain's local database is already open through `gbrain serve` (MCP, PID 28665) …
+
+$ GBRAIN_HOME=~/.v-team/clients/samwise gbrain get orientation-notes
+title: Orientation notes — samwise        # real content, server still up
+```
+
+**The direct-file recipe (`GBRAIN_HOME=$HOME/.v-team/brain`) is now the thing to
+avoid** while a server runs. It is still correct when nothing holds the lock, and
+`scripts/lib.sh` `vt_brain()` / `vt_brain_put()` still use it — which is exactly
+why writes remain blocked; see below.
 
 ## Failure has to be loud, and by default it is not
 
