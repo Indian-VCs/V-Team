@@ -200,15 +200,44 @@ of Staff.
 earned it*; a chief of staff runs the principal's office and **allocates work** —
 an accountability my own definition explicitly forbids me.
 
-**The function it names is the router's.** `/assign` is a skill held by the
-CTO's session. I refused to make it a resource this morning
-(`2026-08-16-dispatch-has-no-owner.md`) on a mechanical ground the org model does
-not touch: a subagent's context dies at hand-back, so a router-as-resource moves
-the run graph from the longest-lived context to the shortest, and forces a
-two-level spawn chain. **The org framing genuinely re-opens the question** —
-*"Chief of Staff is one for now"* describes a person — but it is its own hire,
-with its own recurrence record, and the mechanical objection is what it has to
-answer. **Not hired here.**
+**The function it names is the router's**, and under the org model that function
+is a person-shaped job. So the question is not whether it exists but what must be
+true before anyone holds it.
+
+**An objection I made on 2026-08-16 and withdraw here.** I argued that a
+subagent's context dies at hand-back, so a router-as-resource would move the run
+graph from the longest-lived context to the shortest. The CTO, 2026-08-17:
+*"that's the reason to have memory for the agent, so that it knows what it has
+done. It is just like a person going out of office after work hours and then
+coming back and then working again."* **He is right and I was wrong.** The run
+graph does not belong in any context; it belongs in a store, and a router
+rehydrates from it exactly as every resource here is already told to read its own
+store before starting. Context death is only fatal for state nobody wrote down.
+`docs/memory.md` is an argument against the position I took, and I did not apply
+my own team's doctrine to my own objection.
+
+**What actually stands in the way, and it is better than what it replaces:**
+
+1. **Nothing to rehydrate from.** A Chief of Staff waking up asks *what is in
+   flight, who is busy, what is blocked, what did I dispatch that never came
+   back.* All four have no answer today: `ledger/runs/*.jsonl` was deleted in #9
+   and trailers record work that **landed** — silent about in-flight, handed-back,
+   dropped, and whether a person is occupied. **This is a prerequisite for the
+   hire, not an argument against it**, and it is buildable now. It is stage 4 of
+   the migration and **four** rules now depend on it: one-live-agent,
+   effort-from-difficulty, the brief's declared escalation target, and this.
+2. **The two-level spawn chain is untouched by memory and still stands.** A
+   router that is a resource means agents spawning agents: either the never-spawn
+   invariant breaks, or it becomes a per-resource permission every future hire
+   will argue for. Architectural, not about state. I have no answer today.
+3. **Rehydration is a real, unpriced cost.** The router is invoked more often
+   than anything else — once per dispatch, N times per run — and re-orients every
+   time. `orient.sh` is a one-time ramp and is not the same thing. **I have not
+   measured it.** Named so it is a known cost rather than a discovery.
+
+**Verdict: not yet — because the run graph is unwritten and the spawn chain is
+unresolved**, not because a router cannot be a person. Both are closable; one is
+buildable this week and should be built regardless. **Not hired here.**
 
 ## Memory — closed, and it strengthens the case
 
