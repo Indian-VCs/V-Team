@@ -101,26 +101,50 @@ goes in the brief as a fact — not as a pointer to where it was said.
 Every unit of work has exactly **one** accountable resource. Never two, never
 zero. Two accountables means nobody is. See `dashboard.md`.
 
-**A resource may run as many instances at once as there is work for.** The
-registry describes **roles, not headcount** — three `implementer` runs on three
-disjoint units of work have one accountable *each*, and that is this rule
-satisfied, not bent. Parallel instances are how throughput scales without paying
-the permanent context cost of another registry entry that `/assign` could not
-tell apart from the first. What instances owe is **distinguishability in the
-record**: the `V-Team-Run` id is what separates them, which is one more reason
-§7 requires it.
+**One person, one live agent. A person is never cloned.** CTO ruling,
+2026-08-17: *"the same agent or person should not be invoked twice because, in
+the real world, one person can take only one task. He can take multiple tasks at
+a time, but he cannot be cloned multiple times."*
 
-**But a resource may not gate its own work.** The unit of work "decide whether
-this merges" is a different unit from "build it", and when the same instance
-holds both, its one accountable is also its only reviewer — the exact collapse
-this rule exists to prevent. It is invisible when a role is cloned, because both
-units are logged under the same name.
+- A person may hold **several tasks concurrently** — as **one** context.
+- More work for a busy person is more work in the **same** context, never a
+  second copy of them.
+- More work than the people can hold is a **hiring signal**, not a spawning one.
+  That is what *"hiring can be done based on the need"* means, and it is the
+  first legitimate capacity argument this repo has had.
 
-The test is per **run**, not per role: an `implementer` instance may gate
-another `implementer` instance's PR — different unit, different accountable,
-which is the intended use. What it may not do is gate a PR whose commits carry
-its own callsign **and its own run id**. That is mechanically checkable from
-data the attribution guard already parses, and it needs no new resource.
+**This reverses the previous revision of this paragraph**, which said a resource
+may run as many instances as there is work for and called the registry a
+description of *roles, not headcount*. That was true when written and is false
+now: the registry is becoming a description of **roles and the people who hold
+them** (`docs/org-model.md`). Four `implementer` instances ran concurrently on
+2026-08-16 under the old rule, sharing one callsign, one brain source and one
+track record; that is the thing this rule forbids.
+
+**It constrains the router, and nothing can check it yet.** A resource cannot
+know how many copies of itself exist. Detecting a second live copy needs an
+artifact recording live dispatches — `ledger/runs/*.jsonl`, deleted 2026-08-16.
+So this is honoured by hand until that substrate is restored, and no guard is
+claimed for it. Instances that do exist still owe **distinguishability in the
+record**, which is the `V-Team-Run` id and one more reason §7 requires it.
+
+**And a person may not gate their own work.** The unit of work "decide whether
+this merges" is a different unit from "build it", and when one person holds
+both, their one accountable is also their only reviewer — the exact collapse
+this rule exists to prevent.
+
+**The no-cloning rule makes this test simpler, not harder.** While a role could
+be cloned, the test had to be per *run* — both sides logged under one callsign,
+so the run id was the only thing separating builder from gate. With one person
+per callsign, the callsign alone is the test:
+
+> A person may not gate a PR whose commits carry **their own callsign**. Two
+> people in the same role gating each other's work is the intended use —
+> different person, different accountable.
+
+That is mechanically checkable from data `check-attribution.sh` already parses,
+and it needs no new resource. It gets *more* reliable once people are rows,
+because the trailer stops being ambiguous about who authored what.
 
 ## 7. A resource is addressed by callsign — in the trailer, and everywhere else
 

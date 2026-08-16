@@ -65,6 +65,7 @@ without changing anything else.
 | `skills/retire/` | Removes one. V-teams are temporary by design. |
 | `ledger/` | Evidence. Escapes, attributions, rule-state changes, run graphs. |
 | `docs/protocol.md` | **Cross-cutting rules every resource follows.** Termination, escalation, independence. |
+| `docs/org-model.md` | Roles vs. people, levels, one-live-agent, and the migration that gets there. |
 | `docs/` | Charter, difficulty map, learning policy, weekly report, dashboard design. |
 
 ## The V-Team
@@ -130,6 +131,31 @@ clause above names the non-human referent unambiguously — which is exactly wha
 the one-clause test is for. Full reasoning and the tie-breakers in
 `skills/hire`, "Borderline callsigns"; the audit is
 `ledger/gaps/2026-08-16-callsign-not-on-the-dispatch-surface.md`.
+
+### Roles and people — the org model
+
+**A role is a job. A person holds it. Today there are 8 of each, and that is a
+fact about headcount rather than a property of the file.** CTO ruling,
+2026-08-17: the roster models an organisation — many people per role, at levels,
+hired on need. The design and its four-stage migration are in
+`docs/org-model.md`; nothing is renamed and nobody is hired by that document.
+
+| Concept | Owns | Example |
+|---|---|---|
+| **role** | capability, altitude, surfaces, `never:`, the autonomy ceiling | `implementer` |
+| **person** | callsign, persona, autonomy (L1/L2/L3), brain source, track record | **Samwise** |
+
+**One person, one live agent.** A person may hold several tasks at once, in one
+context; they are never cloned. Four `implementer` instances ran concurrently on
+2026-08-16 under the old rule, sharing one callsign, one store and one record —
+`protocol.md` §6 now forbids it, and running out of people is a **hiring signal**
+rather than a spawning one.
+
+**L1/L2/L3 is `autonomy`, not a new field.** L1 `recommend` · L2 `branch` ·
+L3 `merge-on-green`. Every new person starts at L1; nobody exceeds their role's
+ceiling. **Level governs authority, never capability** — effort still comes from
+the task's difficulty, so a new L1 on a hard problem gets full effort and then
+recommends rather than merges.
 
 ### Department sizes
 
@@ -243,7 +269,10 @@ decompose and hand back plans; they never spawn each other.
 deliberately worse. Effort is chosen by how hard the task is, and difficulty is
 defined as *inverse gate coverage* — where lint, typecheck, knip and the unit
 suite catch a mistake, work is cheap; where the gate is blind, effort is high.
-See `docs/difficulty.md`.
+See `docs/difficulty.md`. **Levels do not change this**: seniority governs what
+you may do unapproved, never how much thinking a task gets — a junior given a
+smaller model would produce worse work, earn a worse record and never promote,
+which is a seniority trap the ledger would faithfully certify.
 
 **Altitude and autonomy are separate.** Altitude is which question you may
 answer — which module (implementation), how it should behave (behavior),

@@ -184,6 +184,45 @@ usage change, it is free, and it addresses the actual complaint. If it is still
 too much after that, the next lever is **fewer resources**, not more — see the
 retirement finding in `ledger/gaps/2026-08-16-dispatch-has-no-owner.md`.
 
+## Does the org model change any of this? — No, and it strengthens two of them
+
+Added 2026-08-17, when the CTO specified that the roster should model an
+organisation with many people per role (`docs/org-model.md`). Re-checked against
+that goal rather than the one this file was written against:
+
+**Reporting lines: unchanged, and the org framing makes the argument stronger.**
+A real org has managers because authority and information must be distributed
+across people who cannot all be in the room. **Here the CTO's window *is* the
+room** — every dispatch already passes through it. A management layer inserted
+into a one-room org does not remove decisions from the room; it removes
+*visibility* of them while leaving the accountability in place. The mechanical
+objection above is independent of framing and also unchanged: a subagent's
+context dies at hand-back, so a router-as-resource moves the run graph from the
+longest-lived context in the system to the shortest.
+
+**Dispatch, graph 1: one hop still, but the target is now a *person*.** The
+router matches a request to a **role** on its capability id, then picks a person
+who holds that role and is not already live — **one person, one live agent**
+(`protocol.md` §6). Running out of people is a hiring signal, not a spawning
+one. Nothing about the graph's shape changes; what changes is that its leaves
+have names that mean one worker each.
+
+**Escalation, graph 2: unchanged.** Altitude is a property of the *role*, so
+two people in one role escalate to the same place. Seniority does not shorten
+the ladder — an L3 implementer still escalates to behavior, because the ladder
+is about which question you may answer, not about how trusted you are.
+
+**Chief of Staff.** The CTO referred to one on 2026-08-17. **It does not exist**
+in this repo — not in `registry.yaml`, this file, the README, or any ledger
+entry. It is not `roster-steward` under another name: Anubis owns *who is on the
+team and whether they earned it*, and is explicitly forbidden from dispatching
+anyone. The function it names — running the principal's office and allocating
+work — is the **router's**, and the router is a skill rather than a person for
+the reasons above. The org framing genuinely re-opens whether that should
+change; it is a hire, with its own recurrence record, and
+`ledger/gaps/2026-08-17-registry-models-roles-not-people.md` names it as the
+first open question the org model creates. Not hired.
+
 ## Where each resource sits
 
 | Resource | Callsign | Altitude | Dispatched by | Escalates to | Terminal on |
