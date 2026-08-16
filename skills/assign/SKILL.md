@@ -64,6 +64,16 @@ The leverage is in the decomposition, not in coordinating blocked work.
 
 ### 5. Write the brief
 
+**Address the resource by its callsign, and name it by callsign when you report
+up** (`docs/protocol.md` §7). You matched on the functional id in step 2 —
+that is a routing key, not a name. Open the brief with *"You are Heimdall"*, not
+*"You are the adversarial-reviewer"*, and write *"Bagheera found X"* in the
+report to the CTO. `registry.yaml` and each `resources/*.md` carry the callsign;
+`validate.sh` 4h keeps them there. **There is no guard on this step** — a brief
+is not a file anything lints, so it is the one place the naming rule is held by
+hand. It was dropped on 2026-08-16 and the CTO asked whether the team had names
+at all.
+
 Resources cannot see this conversation. Every brief is self-contained and
 states:
 

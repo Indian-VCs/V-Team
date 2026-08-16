@@ -107,15 +107,66 @@ in the same PR.** That paragraph is the test — a name nobody can justify in a
 clause is a name that means nothing, and the paragraph is where the argument
 has to be made in public.
 
+**And put the callsign on the dispatch surface, which is not the README.**
+Added 2026-08-16, after the CTO asked *"what's with these names, implementer,
+architect?"* and then *"even HR doesn't have a name?"*. Every callsign was
+already correct in `registry.yaml`, `README.md` and `docs/delegation.md`, and
+briefs still addressed resources by job title — because none of those files is
+what a dispatcher opens. It opens `resources/<name>.md` (mirrored into a
+product's `.claude/agents/`), where the frontmatter is `name: <job title>` and
+the description said nothing about the callsign. **A callsign that exists only
+in the registry is not in use.** `validate.sh` 4h now requires, per resource:
+
+- the callsign inside the frontmatter `description:` — that string is what a
+  dispatcher reads when it picks and addresses the resource;
+- a `Callsign **<X>** — <one-clause>` line under the H1;
+- the sentence `You are <X>`, so the resource signs its own work by callsign
+  even when the brief that dispatched it used the job title.
+
+### Borderline callsigns — the species test (precedent, 2026-08-16)
+
+`Samwise` was challenged as possibly human. **Ruled compliant.** The test is
+**species, not manner**: does the character belong to a people that is not
+*Homo sapiens* within its own fiction? A hobbit does — hobbits are a distinct
+people of Middle-earth, named as such throughout. That Tolkien's Prologue calls
+them *"relatives of ours"* is the honest counter-argument and it is recorded
+here rather than suppressed; it is a statement of kinship, not of species, and
+`Neo`, `Hermione`, `Ariadne` and `Alfred` failed on something stronger — they
+are humans outright, with no other reading.
+
+Two tie-breakers, in order, for a case that is genuinely 50/50 after the
+species test:
+
+1. **The one-clause justification must survive the ambiguity.** `Jarvis` is
+   borderline for the opposite reason to Samwise — J.A.R.V.I.S. the system is
+   non-human, Edwin Jarvis the butler is not, and the callsign replaced
+   `Alfred`, another fictional butler. It stands because the README clause
+   (*"sees every system at once and gives orders to no one"*) names the
+   non-human referent unambiguously. Keep the clause attached to the name.
+2. **Incumbency breaks a true tie toward keeping the name.** A rename costs a
+   `ledger/` and commit-trailer record that can never be rewritten, plus a
+   brain-store migration (below). At the margin where the rule is genuinely
+   indifferent, that cost is real and the naming benefit is zero. Incumbency
+   is a tie-breaker only — it never rescues a name that fails the species test.
+
 **A callsign is permanent the moment it lands in a commit.** It goes into the
-`V-Team-Resource` trailer and into merged `ledger/` entries, neither of which
-is ever rewritten. Six callsigns had to be renamed on 2026-08-16 and the old
-names are still in the record — see
+`Co-authored-by:` trailer (`docs/protocol.md` §7 — `V-Team-Resource:` was
+dropped in the same revision) and into merged `ledger/` entries, neither of
+which is ever rewritten. Six callsigns had to be renamed on 2026-08-16 and the
+old names are still in the record — see
 `ledger/gaps/2026-08-16-dispatch-has-no-owner.md` for the mapping. Get it right
 at draft time; `roster-steward` is the last check, not the first.
 
-The brain source id follows the callsign (`docs/memory.md`), so a rename
-orphans a store. One more reason not to need one.
+**The brain source id is the callsign, lowercased (`docs/memory.md`), so a
+rename orphans a store — and an orphaned store is worse than a bad name.** A
+gbrain write to a source that does not exist does not error; it lands in
+`default`, which is federated, so the renamed resource's episodic memory pours
+into the store every resource searches. That has already happened once here.
+A rename PR therefore either migrates the source *in the same PR*, or states in
+writing that the source id is deliberately frozen at the old string and no
+longer matches the callsign. Silence on this is not an option; `validate.sh` 4g
+checks the sources that exist but cannot check the ones you meant to create,
+and it degrades to a warning when the brain is locked.
 
 ## Probation
 
@@ -130,7 +181,11 @@ drifting performance is gradual, on the same evidence logic as promotion.
 
 ## Register it
 
-1. Write `resources/<name>.md` with the standard frontmatter.
+1. Write `resources/<name>.md` with the standard frontmatter — **including the
+   callsign in the `description:` string, a `Callsign **<X>** — <clause>` line
+   under the H1, and the sentence `You are <X>`.** `validate.sh` 4h fails
+   without all three. This is the step that decides whether the name is ever
+   spoken; the README paragraph in step 5 only decides whether it was argued.
 2. Add the entry to `registry.yaml` — capabilities, altitude, autonomy, effort,
    beat, surfaces, never.
 3. Remove the corresponding entry from `known_gaps`.
