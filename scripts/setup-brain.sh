@@ -6,9 +6,15 @@
 #   ./scripts/setup-brain.sh --mcp        # mint a per-resource OAuth client and
 #                                         # register one HTTP MCP server each
 #
-# ORDER MATTERS for --mcp: it mints clients through the CLI, which cannot open
-# the PGLite file while `gbrain serve` holds it. Run it with the server STOPPED,
-# then start the server, then restart your session.
+# ORDER MATTERS for --mcp, and the script now owns the order rather than asking
+# you to remember it. Minting a client writes to PGLite, so it needs the server
+# STOPPED; issuing that client an access token goes through the OAuth /token
+# endpoint, so it needs the server UP. Those are opposite requirements, which is
+# why --mcp runs in two phases and starts the server itself between them.
+#
+# Start it with the server stopped. Then restart your session: a registration
+# only reaches a NEW session, and an agent dispatched from the session already
+# running will not see it.
 #
 # WHY A SEPARATE BRAIN, not a source inside ~/.gbrain:
 #   The personal brain is BEHAVIOURAL ONLY by standing doctrine — preferences,
@@ -150,49 +156,135 @@ if [[ "${1:-}" == "--mcp" ]]; then
     exit 0
   fi
 
-  # register-client writes to the DB, so it cannot run while `serve` holds the
-  # PGLite lock. Say so plainly instead of emitting eight identical failures.
-  if ! gbrain auth list >/dev/null 2>&1; then
-    echo "cannot mint clients: the brain is locked (a 'gbrain serve' is running?)."
-    echo "stop it, re-run '$0 --mcp', then start the server again:"
-    echo "  gbrain serve --http --port $VT_MCP_PORT --bind 127.0.0.1 \\"
-    echo "    --token-ttl 31536000 --suppress-bootstrap-token \\"
-    echo "    >> $HOME/.v-team/logs/serve-http.log 2>&1 &"
-    exit 1
-  fi
-
   SECRETS="${VT_SECRETS:-$HOME/.v-team/secrets}"
   mkdir -p "$SECRETS"; chmod 700 "$SECRETS"
 
+  # Minting writes to the DB, so it needs the PGLite file and therefore needs
+  # `serve` stopped. Re-running to refresh configs or registrations needs
+  # neither. Demand the lock only when something is actually missing, or the
+  # script stops being re-runnable the moment it has succeeded once — which is
+  # the state it spends almost all of its life in.
+  NEED_MINT=""
+  for s in $STORES; do
+    [[ -s "$SECRETS/$s-client-id" && -s "$SECRETS/$s-client-secret" ]] || NEED_MINT="yes"
+  done
+  if [[ -n "$NEED_MINT" ]] && ! gbrain auth list >/dev/null 2>&1; then
+    echo "cannot mint clients: the brain is locked (a 'gbrain serve' is running?)."
+    echo "stop it, re-run '$0 --mcp' — it will restart the server itself:"
+    echo "  pkill -TERM -f 'gbrain serve'"
+    exit 1
+  fi
+
+  # PHASE 1 — mint one OAuth client per callsign, server STOPPED.
+  #
+  # `register-client` writes to the DB, so it needs the PGLite file. It prints
+  # the client id and secret as text and exits; there is no --json on this
+  # subcommand, so the values are read back with a regex on the exact token
+  # prefixes gbrain mints (`gbrain_cl_` / `gbrain_cs_`). Both are shown once
+  # and never again, which is why they are captured here rather than re-derived.
+  #
+  # read ONLY, federated onto its own store plus the shared team store. Never
+  # the full-access token in $SECRETS/mcp-token — that one is unscoped, reads
+  # every store, and is reserved for the write path.
+  for s in $STORES; do
+    if [[ -s "$SECRETS/$s-client-id" && -s "$SECRETS/$s-client-secret" ]]; then
+      echo "  $s — client exists"
+      continue
+    fi
+    out="$(gbrain auth register-client "vteam-$s" \
+             --grant-types client_credentials --scopes "read" \
+             --source "$s" --federated-read "$s,default" 2>&1)" || true
+    grep -oE 'gbrain_cl_[A-Za-z0-9_-]+' <<<"$out" | head -1 > "$SECRETS/$s-client-id"
+    grep -oE 'gbrain_cs_[A-Za-z0-9_-]+' <<<"$out" | head -1 > "$SECRETS/$s-client-secret"
+    unset out
+    if [[ -s "$SECRETS/$s-client-id" && -s "$SECRETS/$s-client-secret" ]]; then
+      chmod 600 "$SECRETS/$s-client-id" "$SECRETS/$s-client-secret"
+      echo "  $s — client minted"
+    else
+      rm -f "$SECRETS/$s-client-id" "$SECRETS/$s-client-secret"
+      echo "  $s — MINT FAILED (see docs/memory.md)"
+    fi
+  done
+
+  # PHASE 2 — the server has to be UP for this half.
+  #
+  # An access token is issued by the OAuth `/token` endpoint, not by
+  # register-client, so it cannot be obtained while the server is stopped.
+  # That is the ordering the previous revision got backwards: it tried to read
+  # an `access_token` out of the minting call, which never contained one.
+  if ! curl -fsS -m 3 "http://127.0.0.1:$VT_MCP_PORT/health" >/dev/null 2>&1; then
+    echo
+    echo "starting the HTTP MCP server on 127.0.0.1:$VT_MCP_PORT"
+    mkdir -p "$HOME/.v-team/logs"
+    ( GBRAIN_HOME="$GBRAIN_HOME" nohup gbrain serve --http --port "$VT_MCP_PORT" \
+        --bind 127.0.0.1 --token-ttl 31536000 --suppress-bootstrap-token \
+        >> "$HOME/.v-team/logs/serve-http.log" 2>&1 & )
+    for _ in $(seq 1 30); do
+      curl -fsS -m 2 "http://127.0.0.1:$VT_MCP_PORT/health" >/dev/null 2>&1 && break
+      sleep 1
+    done
+  fi
+  curl -fsS -m 3 "http://127.0.0.1:$VT_MCP_PORT/health" >/dev/null 2>&1 || {
+    echo "server did not come up on :$VT_MCP_PORT — see $HOME/.v-team/logs/serve-http.log"
+    exit 1
+  }
+
+  echo
   for s in $STORES; do
     tokfile="$SECRETS/$s-access-token"
     if [[ ! -s "$tokfile" ]]; then
-      # read ONLY, and federated onto its own store plus the shared team store.
-      # Never the full-access token in $SECRETS/mcp-token — that one is unscoped,
-      # reads every store, and is reserved for the write path.
-      #
-      # UNVERIFIED: the flags are from `gbrain auth register-client --help` and
-      # the resulting grant was confirmed against the live server via `whoami`
-      # for `samwise`, but this minting call was never executed — the brain was
-      # locked by a running `serve` throughout, which is the whole reason this
-      # block insists on being run with the server stopped. If the token does
-      # not land, check the real key name in $SECRETS/<callsign>-client.json.
-      if gbrain auth register-client "vteam-$s" \
-           --scopes "read" --source "$s" --federated-read "$s,default" \
-           --json > "$SECRETS/$s-client.json" 2>/dev/null; then
-        jq -r '.access_token // .token // empty' "$SECRETS/$s-client.json" > "$tokfile"
-        chmod 600 "$tokfile" "$SECRETS/$s-client.json"
-      fi
+      [[ -s "$SECRETS/$s-client-id" ]] || { echo "  $s — no client, skipped"; continue; }
+      # client_credentials: the grant that needs no human at a browser, which is
+      # the whole point for an unattended resource.
+      curl -fsS -m 15 -X POST "http://127.0.0.1:$VT_MCP_PORT/token" \
+        -H "Content-Type: application/x-www-form-urlencoded" \
+        --data-urlencode "grant_type=client_credentials" \
+        --data-urlencode "client_id=$(cat "$SECRETS/$s-client-id")" \
+        --data-urlencode "client_secret=$(cat "$SECRETS/$s-client-secret")" \
+        2>/dev/null | jq -r '.access_token // empty' > "$tokfile" || true
+      [[ -s "$tokfile" ]] && chmod 600 "$tokfile"
     fi
     if [[ ! -s "$tokfile" ]]; then
+      rm -f "$tokfile"
       echo "  $s — NO TOKEN (mint manually, see docs/memory.md)"
       continue
     fi
+    # Thin-client config: the SAME OAuth client, reachable from plain Bash.
+    #
+    # This is the path that works in a session that is already running. An MCP
+    # registration only reaches a NEW session, so a resource dispatched right
+    # now has no MCP tools — and the old fallback ("export GBRAIN_HOME=the
+    # brain") opens the PGLite file directly and therefore fails for exactly as
+    # long as the server is up. That left the common case with no working path
+    # at all, which is the failure this whole change exists to remove.
+    #
+    # `remote_mcp` puts the CLI in thin-client mode: gbrain routes each op
+    # through the running server over HTTP instead of opening the file, and
+    # renders it with the same formatter. Same grant, same denials.
+    cdir="$HOME/.v-team/clients/$s/.gbrain"
+    mkdir -p "$cdir"
+    umask 077
+    cat > "$cdir/config.json" <<EOF
+{
+  "remote_mcp": {
+    "issuer_url": "http://127.0.0.1:$VT_MCP_PORT",
+    "mcp_url": "http://127.0.0.1:$VT_MCP_PORT/mcp",
+    "oauth_client_id": "$(cat "$SECRETS/$s-client-id")",
+    "oauth_client_secret": "$(cat "$SECRETS/$s-client-secret")"
+  },
+  "embedding_model": "$EMBED",
+  "embedding_dimensions": $DIMS
+}
+EOF
+    chmod 600 "$cdir/config.json"
+
     claude mcp remove "vteam-brain-$s" --scope user >/dev/null 2>&1 || true
     if claude mcp add --transport http --scope user "vteam-brain-$s" \
          "http://127.0.0.1:$VT_MCP_PORT/mcp" \
          --header "Authorization: Bearer $(cat "$tokfile")" >/dev/null 2>&1; then
-      echo "  $s — registered 'vteam-brain-$s' (tools: mcp__vteam-brain-$s__*)"
+      # ${s} braced: `$s__` is a legal identifier, so under `set -u` the
+      # unbraced form expanded to an unbound variable and aborted the loop.
+      echo "  $s — registered 'vteam-brain-$s' (tools: mcp__vteam-brain-${s}__*)"
     else
       echo "  $s — registration FAILED, see docs/memory.md"
     fi

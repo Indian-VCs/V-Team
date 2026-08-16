@@ -145,9 +145,20 @@ while read -r pair; do
   # always runs — so a rename that forgets the source id fails here even when
   # 4g cannot run. An unmigrated source does not error at runtime; it silently
   # writes into the federated `default` store.
+  # Three shapes now bind a resource to its store, and the file must use at
+  # least one of them. The store id is the callsign lowercased in all three:
+  #   MCP          mcp__vteam-brain-<cs>__*   — the tool namespace IS the grant
+  #   thin client  ~/.v-team/clients/<cs>     — the config holding its OAuth client
+  #   direct CLI   --source <cs>              — only correct with no server running
+  # Checking only the last one would fail every file the moment the recipe
+  # stopped being a `--source` flag, which is exactly what happened on
+  # 2026-08-17: the guard asserted the shape of the recipe instead of the fact
+  # it exists to protect, which is that the file names THIS resource's store.
   lc_cs=$(tr '[:upper:]' '[:lower:]' <<<"$cs")
   grep -qF -- "--source $lc_cs" <<<"$flat" \
-    || fail "$f: does not tell the resource to read '--source $lc_cs' — the brain source id is the callsign lowercased, and a mismatch sends this resource's memory into the federated 'default' store instead of erroring (docs/memory.md)"
+    || grep -qF -- "clients/$lc_cs" <<<"$flat" \
+    || grep -qF -- "vteam-brain-$lc_cs" <<<"$flat" \
+    || fail "$f: never names its own brain store '$lc_cs' — expected one of 'mcp__vteam-brain-$lc_cs__*', '~/.v-team/clients/$lc_cs', or '--source $lc_cs'. The store id is the callsign lowercased, and a mismatch sends this resource's memory into the federated 'default' store instead of erroring (docs/memory.md)"
 done < <(awk '
   /^  - name: /     { r=$0; sub(/^  - name: /,"",r); gsub(/[[:space:]]/,"",r) }
   /^    callsign: / { c=$0; sub(/^    callsign: /,"",c); sub(/#.*/,"",c); gsub(/[[:space:]]/,"",c);
