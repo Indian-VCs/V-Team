@@ -228,8 +228,9 @@ rule uncheckable and the same absence that makes per-run decisions invisible:
 | one person, one live agent | nothing records which people are live |
 | effort resolved from difficulty | nothing records what effort a dispatch used |
 | the brief named an escalation target | nothing records the brief |
+| a Chief of Staff rehydrating | nothing records what is in flight or never came back |
 
-**Three rules, one missing substrate.** `ledger/runs/*.jsonl` was that substrate
+**Four rules, one missing substrate.** `ledger/runs/*.jsonl` was that substrate
 and was deleted on 2026-08-16; `pending.sh` was built to read it and is dormant.
 That is why restoring it is stage 4 of the migration rather than an optional
 improvement — it is the single change that makes three hand-held rules
@@ -343,20 +344,92 @@ and **allocates work**, which is a different accountability and one I explicitly
 do not hold — my own definition forbids me from dispatching anyone.
 
 The function it names is the **router's**. `/assign` is a skill held by the
-CTO's session, not a person, and I refused to make it a resource this morning
-(`ledger/gaps/2026-08-16-dispatch-has-no-owner.md`) on a mechanical ground that
-the org model does not touch: a resource is a subagent whose context dies at
-hand-back, so a router-as-resource moves the run graph from the longest-lived
-context in the system to the shortest, and forces a two-level spawn chain that
-either breaks the never-spawn invariant or turns it into a per-resource
-permission.
+CTO's session, not a person. **Under the org model the function is real and it
+is a person-shaped job**, so the question is not whether it exists but what has
+to be true before it can be held.
 
-**But the org framing genuinely re-opens it**, because *"Chief of Staff is one
-for now"* describes a person, and under this model roles are held by people. I
-am not resolving it inside a design PR. It is the first open question the org
-model creates, it needs its own recurrence record and its own `/hire` run, and
-the mechanical objection above is what any such hire has to answer. **Not hired
-here.**
+### An objection I made, and withdraw
+
+I refused a router hire on 2026-08-16 partly on this ground:
+
+> *"a resource is a subagent whose context dies at hand-back, so a
+> router-as-resource moves the run graph from the longest-lived context in the
+> system to the shortest"*
+
+**That argument is wrong and I am withdrawing it, not defending it.** The CTO,
+2026-08-17:
+
+> *"that's the reason to have memory for the agent, so that it knows what it has
+> done. It is just like a person going out of office after work hours and then
+> coming back and then working again."*
+
+He is right. The objection assumed the run graph lives in a *context*. It should
+not live in any context, long-lived or short — it belongs in a **store**, and a
+router rehydrates from it on every invocation exactly as every resource in this
+repo is already instructed to read its own store before starting. A human chief
+of staff does not hold the org chart in working memory either; they keep a
+board, go home, come back and read it. **Context death is only fatal for state
+that was never written down**, and writing it down is what the memory layer is
+for. The whole of `docs/memory.md` is an argument against the position I took.
+
+### What actually stands in the way
+
+**1. There is nothing to rehydrate from. This is the real blocker and it is
+buildable now.**
+
+A Chief of Staff waking up asks four questions: *what is in flight, who is
+busy, what is blocked, and what did I dispatch that never came back.*
+**Today all four have no answer.** `ledger/runs/*.jsonl` was deleted in #9 when
+the track record became a projection over commit trailers, and trailers record
+work that **landed**. They are silent about work in flight, work handed back,
+work dropped, and whether a person is currently occupied — the last of which is
+also what the one-live-agent rule needs.
+
+So this is a **prerequisite for the hire, not an argument against it**, which
+makes it a better finding than the objection it replaces: it names a concrete
+artifact somebody can build this week. It is stage 4 of the migration below, and
+it is now the substrate that **four** rules depend on:
+
+| Needs it | For |
+|---|---|
+| one person, one live agent | is this callsign already working |
+| effort resolved from difficulty | what did the dispatch actually choose |
+| the brief's declared escalation target | what was the resource told |
+| **Chief of Staff** | **what is in flight, who is busy, what never came back** |
+
+**2. The two-level spawn chain is untouched by memory, and still stands.**
+
+A router that is a resource is dispatched by the CTO's window and then
+dispatches the workers. That is agents spawning agents. `skills/assign` §6 and
+`docs/charter.md` say resources decompose but **never spawn**, so either the
+invariant breaks, or it is exempted for one privileged resource — at which point
+it stops being *"nobody spawns"*, a mechanical invariant, and becomes *"one
+resource may spawn"*, a permission every future hire will argue for. This is
+architectural rather than about state, and no memory layer touches it. It is the
+open question a Chief of Staff hire has to answer, and I do not have an answer
+today.
+
+**3. Rehydration is a real cost and should be priced before it surprises
+anyone.**
+
+A person reads their board in thirty seconds. An agent re-reads and re-orients
+on **every invocation**, and the router is invoked more often than anything else
+in the system — once per dispatch, N times per run. `orient.sh` is a one-time
+ramp and is not the same thing; this is a recurring tax on the most frequent
+operation the org performs, and the CTO has already observed that agents are
+slower than he expects. **I have not measured it.** It may be small. It is named
+here so that it is a known cost rather than a discovery.
+
+### Verdict: not yet, and for reasons that can be closed
+
+Not *"a router cannot be a person"* — it can, and under the org model it should
+be. **Not yet, because the run graph is unwritten and the spawn chain is
+unresolved.** The first is buildable now and someone should build it regardless
+of this hire, since three other rules already need it. The second is a design
+question about the never-spawn invariant that must be answered before, not
+during, a hire.
+
+**Not hired here.** It needs its own recurrence record and its own `/hire` run.
 
 ## Migration — staged, and no rename or hire in any stage
 
@@ -407,9 +480,12 @@ This is the stage that delivers *"a persona for each one"* and it is the
 largest. It is last because stages 1–2 are useful on their own.
 
 **Stage 4 — the dispatch record.** Restore an artifact the router writes at
-dispatch and clears at hand-back, so *"is this person already live"* becomes
-checkable and `pending.sh` wakes up. Router surface, not mine. **Until this
-lands, one-person-one-agent is honoured, not enforced.**
+dispatch and clears at hand-back: what is in flight, who is busy, what is
+blocked, what never came back. Router surface, not mine, and it should be built
+whether or not the rest of this lands — **four rules depend on it** (table
+above), including any future Chief of Staff, which cannot rehydrate from
+nothing. `pending.sh` was built to read exactly this and wakes up when it
+returns. **Until it lands, one-person-one-agent is honoured, not enforced.**
 
 ## What is refused, and it is two things
 

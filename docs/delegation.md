@@ -195,10 +195,23 @@ A real org has managers because authority and information must be distributed
 across people who cannot all be in the room. **Here the CTO's window *is* the
 room** — every dispatch already passes through it. A management layer inserted
 into a one-room org does not remove decisions from the room; it removes
-*visibility* of them while leaving the accountability in place. The mechanical
-objection above is independent of framing and also unchanged: a subagent's
-context dies at hand-back, so a router-as-resource moves the run graph from the
-longest-lived context in the system to the shortest.
+*visibility* of them while leaving the accountability in place.
+
+**⚠ One argument in this file is withdrawn: context lifetime.** The section
+above — *"A graph holder whose memory ends at the first hand-back is strictly
+worse than the CTO's session"* — is **wrong**, and the CTO said so on
+2026-08-17: *"that's the reason to have memory for the agent, so that it knows
+what it has done. It is just like a person going out of office after work hours
+and then coming back and then working again."* The run graph does not belong in
+any context; it belongs in a **store**, and a router rehydrates from it exactly
+as every resource here is already told to read its own store before starting.
+The paragraph is left in place rather than rewritten — it was the reasoning at
+the time — but it must not be cited. What replaces it is in
+`docs/org-model.md`, "Chief of Staff": the run graph is **unwritten**
+(`ledger/runs/` was deleted in #9, and trailers describe only work that landed),
+so there is nothing to rehydrate from — a prerequisite that is buildable now,
+not a reason a router cannot be a person. **The two-level spawn-chain objection
+in the next section is untouched by memory and still stands.**
 
 **Dispatch, graph 1: one hop still, but the target is now a *person*.** The
 router matches a request to a **role** on its capability id, then picks a person
@@ -217,11 +230,12 @@ in this repo — not in `registry.yaml`, this file, the README, or any ledger
 entry. It is not `roster-steward` under another name: Anubis owns *who is on the
 team and whether they earned it*, and is explicitly forbidden from dispatching
 anyone. The function it names — running the principal's office and allocating
-work — is the **router's**, and the router is a skill rather than a person for
-the reasons above. The org framing genuinely re-opens whether that should
-change; it is a hire, with its own recurrence record, and
-`ledger/gaps/2026-08-17-registry-models-roles-not-people.md` names it as the
-first open question the org model creates. Not hired.
+work — is the **router's**, and under the org model that is a person-shaped job.
+**Not yet, for two closable reasons**: the run graph is unwritten, so there is
+nothing for it to rehydrate from, and the two-level spawn chain is unresolved.
+Full reasoning in `docs/org-model.md`, "Chief of Staff"; the checks are in
+`ledger/gaps/2026-08-17-registry-models-roles-not-people.md`. It is a hire with
+its own recurrence record. Not hired here.
 
 ## Where each resource sits
 
