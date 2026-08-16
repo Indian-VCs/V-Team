@@ -159,3 +159,39 @@ thing the dashboard will surface.
 
 Log every gap to `ledger/gaps/`. The weekly report reads it — repeated gaps are
 the hiring signal.
+
+## 8. Your run is not finished while work is waiting
+
+**Your done-condition, and it is observable:**
+
+```sh
+./scripts/pending.sh          # exit 0 required before you report up
+```
+
+**You do not report to the CTO while that exits non-zero.** It fails on two
+things and only two:
+
+- **a dropped handoff** — a node that ended `escalated` or `handed-back` with
+  no child. Both terminal states mean someone else must act (`protocol.md` §1);
+  a leaf in either is a question nobody was asked;
+- **a dispatch never closed** — dispatched, no later record.
+
+Either one is advanced or it is *explicitly deferred with a reason in the
+report*. What is not allowed is silence, because silence is what makes the CTO
+the scheduler.
+
+**Why this is a done-condition and not a reminder.** Six of eight resources are
+recommend-only. They end `complete` and their output goes nowhere unless you
+pick it up — that is by design, and it means "advance finished work" is not an
+extra courtesy, it is the step that makes recommend-only viable at all. On
+2026-08-16 the CTO asked *"why was it not completed till I asked?"* and *"what
+are you waiting for… why do I have to babysit?"* after Bagheera's build-ready
+design sat undispatched while a non-gating question went to Jarvis, and after
+four PRs — two green — sat open. The rule already existed in prose. Prose is
+what failed; a done-condition with a script behind it is the fix.
+
+**And the honest limit.** `pending.sh` reads `ledger/runs/`. **The incident that
+prompted it left no run file, so the check would have been vacuously green on
+it.** Recording the graph (§7 above) is therefore not bookkeeping you do after
+the interesting part — it is the thing that makes the interesting part
+auditable. A run you did not record is a run nothing can hold you to.

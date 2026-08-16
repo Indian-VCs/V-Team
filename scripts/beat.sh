@@ -124,5 +124,21 @@ EOF
 done
 
 (( wrote_any == 0 )) && vt_journal "beat ran, nothing new (a valid day)"
+
+# --- what is waiting on the router -------------------------------------------
+# The beat already fires every 6 hours and already writes to the journal, so it
+# is the cheapest place to put a check whose entire purpose is to notice
+# something before the CTO has to. "Why do I have to babysit?" (CTO,
+# 2026-08-16) is answered by a thing that runs on a timer, not by a person who
+# remembers. pending.sh never decides WHO takes the work — that stays with
+# `skills/assign`; this only refuses to let it go unnoticed.
+if pending_out="$("$VT_ROOT/scripts/pending.sh" 2>&1)"; then
+  vt_log "pending: nothing waiting on the router"
+else
+  n_drop=$(grep -c '^    2' <<<"$pending_out" || true)
+  vt_journal "**$n_drop item(s) waiting on the router** — dropped handoffs or dispatches never closed. \`./scripts/pending.sh\` for the list."
+  vt_log "$pending_out"
+fi
+
 vt_stamp_touch beat-any
 exit 0
