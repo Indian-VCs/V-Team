@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  The V-Team brain's HTTP MCP server — the one process allowed to hold the
+  PGLite lock.
+
+  WHY THIS EXISTS AS A DAEMON. PGLite is single-writer. Before this, the lock
+  was held by a `gbrain serve` that Claude Code spawned per session from a
+  stdio MCP registration, which meant the holder was whichever session happened
+  to start first, for as long as it happened to live. Every other resource then
+  read nothing — silently, because the CLI printed the lock error and still
+  exited 0. Three resources were degraded that way on 2026-08-16, one of them
+  while ruling on a production PR.
+
+  So the holder is now explicit, long-lived and owned by launchd rather than by
+  a session: one server, loopback only, and every resource reaches the brain
+  THROUGH it (MCP tools, or the CLI in thin-client mode). See docs/memory.md.
+
+  RunAtLoad + KeepAlive, unlike beat/weekly which are deliberately neither: this
+  is not a scheduled job that may be missed and caught up. It is the access path.
+  If it is down, every resource falls back to reading the file directly, which
+  is correct only while nothing holds the lock — so a server that dies and stays
+  dead is exactly the ambiguity this whole change removes.
+
+  --bind 127.0.0.1 is not a default worth losing: the tokens are long-lived
+  bearer credentials with read access to every resource's memory.
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>so.indianvcs.vteam.brain</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>-lc</string>
+    <!-- Through a login shell because gbrain is a bun-installed TypeScript
+         entrypoint in ~/.bun/bin, which no launchd PATH contains by default.
+         That missing directory is the same reason the old stdio registration
+         reported ENOENT and never connected at all. -->
+    <string>exec "$HOME/.bun/bin/gbrain" serve --http --port 7433 --bind 127.0.0.1 --token-ttl 31536000 --suppress-bootstrap-token</string>
+  </array>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>GBRAIN_HOME</key>
+    <string>__VT_BRAIN_HOME__</string>
+    <key>PATH</key>
+    <string>__VT_HOME__/.bun/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+  </dict>
+
+  <key>StandardOutPath</key>
+  <string>__VT_HOME__/.v-team/logs/serve-http.log</string>
+  <key>StandardErrorPath</key>
+  <string>__VT_HOME__/.v-team/logs/serve-http.log</string>
+
+  <key>RunAtLoad</key>
+  <true/>
+
+  <!-- Restart if it exits for any reason. A dead holder is indistinguishable
+       from a healthy one to a resource that only sees "no tools". -->
+  <key>KeepAlive</key>
+  <true/>
+
+  <!-- Back off rather than spin: a brain that cannot open (corrupt lock, bad
+       config) would otherwise be restarted continuously and fill the log. -->
+  <key>ThrottleInterval</key>
+  <integer>10</integer>
+</dict>
+</plist>
