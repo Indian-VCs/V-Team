@@ -70,11 +70,57 @@ VT_BACKFILL_MAX_DAYS="${VT_BACKFILL_MAX_DAYS:-30}"
 # --- registry ----------------------------------------------------------------
 vt_resources() { grep -E '^  - name: ' "$VT_ROOT/registry.yaml" | sed 's/.*name: //' | tr -d ' '; }
 
-vt_field() {                                  # $1 = resource, $2 = field
+vt_field() {                                  # $1 = resource (role id), $2 = field
   # Strips trailing YAML comments (` #...`), which several fields carry —
-  # otherwise a callsign comes back as "Hermione  # opens the source first".
+  # otherwise a value comes back as "recommend  # probation". Only ROLE
+  # fields live here since docs/org-model.md's migration (altitude, effort,
+  # autonomy_ceiling, beat, surfaces, never, capabilities) — callsign, persona
+  # and a person's own autonomy moved to `people:`; use vt_person_field.
   awk "/^  - name: $1\$/,/^\$/" "$VT_ROOT/registry.yaml" \
     | grep -m1 "^    $2: " | sed "s/^    $2: //; s/[[:space:]]\{1,\}#.*//; s/[[:space:]]*$//"
+}
+
+# One person per line (callsign only), in registry order. Block-scoped to
+# `people:` — `retired_callsigns:` uses the identical "  - callsign: " shape,
+# so a file-wide grep would silently mix live people with dead names.
+vt_people() {
+  awk '
+    /^people:/  { inb=1; next }
+    /^[a-z_]+:/ { inb=0 }
+    inb && /^  - callsign: / { c=$0; sub(/^  - callsign: /,"",c); sub(/[[:space:]]*#.*/,"",c); gsub(/[[:space:]]*$/,"",c); print c }
+  ' "$VT_ROOT/registry.yaml"
+}
+
+vt_person_field() {                           # $1 = callsign (either case), $2 = field
+  # Case-insensitive match: callers hold the callsign in whichever case suits
+  # them — record.sh/orient.sh already lowercase it for the brain source id —
+  # and registry.yaml always spells it capitalised. Matching case-sensitively
+  # here silently returned nothing for every caller passing the lowered form,
+  # which is exactly the flattering-empty-string shape this repo has been bit
+  # by before (2026-08-16, `gbrain sources list` piped into a pipeline).
+  awk -v want="$(echo "$1" | tr '[:upper:]' '[:lower:]')" '
+    /^people:/  { inb=1; next }
+    /^[a-z_]+:/ { inb=0 }
+    inb && /^  - callsign: / {
+      c=$0; sub(/^  - callsign: /,"",c); sub(/[[:space:]]*#.*/,"",c); gsub(/[[:space:]]*$/,"",c)
+      lc=tolower(c)
+      cur = (lc == want)
+    }
+    inb && cur { print }
+  ' "$VT_ROOT/registry.yaml" \
+    | grep -m1 "^    $2: " | sed "s/^    $2: //; s/[[:space:]]\{1,\}#.*//; s/[[:space:]]*$//"
+}
+
+# The callsign of whoever holds a role — the join orient.sh/record.sh need now
+# that callsign lives on people:, not on the resources: row. One person per
+# role today, so "the" is exact; a role with several people needs a caller
+# that iterates vt_people() directly instead (record.sh does, for its own
+# per-person loop).
+vt_callsign_of_role() {                       # $1 = role (resource name)
+  local cs
+  for cs in $(vt_people); do
+    [[ "$(vt_person_field "$cs" role)" == "$1" ]] && { echo "$cs"; return; }
+  done
 }
 
 # --- model -------------------------------------------------------------------

@@ -81,10 +81,15 @@ REG="$(dirname "$SRC")/registry.yaml"
   echo "# <state>\t<callsign>\t<resource-id>"
   echo "# A Co-authored-by trailer naming a callsign absent from this file is"
   echo "# misattributed and must FAIL. A 'retired' one is legitimate history."
+  # Callsign lives on people: now (docs/org-model.md, stage 1+2), one row per
+  # role today — block-scoped so retired_callsigns' identical "  - callsign: "
+  # shape can never leak into the active list.
   awk '
-    /^  - name: /     { r=$0; sub(/^  - name: /,"",r); gsub(/[[:space:]]/,"",r) }
-    /^    callsign: / { c=$0; sub(/^    callsign: /,"",c); sub(/#.*/,"",c); gsub(/[[:space:]]/,"",c)
-                        if (r != "") { print "active\t" c "\t" r; r="" } }
+    /^people:/         { inb=1; next }
+    /^[a-z_]+:/        { inb=0 }
+    inb && /^  - callsign: / { c=$0; sub(/^  - callsign: /,"",c); sub(/[[:space:]]*#.*/,"",c); gsub(/[[:space:]]*$/,"",c) }
+    inb && /^    role: /     { r=$0; sub(/^    role: /,"",r); sub(/[[:space:]]*#.*/,"",r); gsub(/[[:space:]]*$/,"",r)
+                               if (c != "") { print "active\t" c "\t" r; c="" } }
   ' "$REG"
   awk '
     /^retired_callsigns:/ { inblock=1; next }

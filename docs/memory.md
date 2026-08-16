@@ -74,10 +74,11 @@ proof of anything. The three `isolated` sources still listed — `alfred`,
 hand-maintained until 2026-08-16 and the guarantee above was false for three
 months' worth of hires: a gbrain write to a source that does not exist does not
 fail, it lands in `default` — which is *federated*, so every resource can read
-it. `setup-brain.sh` now derives the store list from the registry's callsigns,
-`vt_brain_ensure_source()` creates the store before any write and spools rather
-than falling through to `default`, and `validate.sh` 4g fails when a registered
-resource has no store. See
+it. `setup-brain.sh` now derives the store list from `registry.yaml`'s
+`people:` block (docs/org-model.md) — a store belongs to a person, which is
+what the callsign meant all along — `vt_brain_ensure_source()` creates the
+store before any write and spools rather than falling through to `default`,
+and `validate.sh` 4g fails when a registered resource has no store. See
 `ledger/escapes/2026-08-16-hire-path-no-brain-source.md`.
 
 **A store id is a callsign, so renaming a callsign orphans a store.** The

@@ -19,7 +19,9 @@ source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 PRODUCT="${VT_PRODUCT:-$VT_ROOT/../prism-platform}"
 ARG="${1:-}"
 
-callsign_of() { vt_field "$1" callsign | tr '[:upper:]' '[:lower:]'; }
+# Callsign lives on people: now (docs/org-model.md); vt_callsign_of_role joins
+# a role back to whoever holds it.
+callsign_of() { vt_callsign_of_role "$1" | tr '[:upper:]' '[:lower:]'; }
 
 if [[ "$ARG" == "--status" ]]; then
   for r in $(vt_resources); do
