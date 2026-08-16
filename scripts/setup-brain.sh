@@ -71,8 +71,23 @@ else
     || { echo "gbrain init failed"; exit 1; }
 fi
 
+# Creating a source and seeding an orientation page both WRITE, so both need the
+# PGLite file — which a running `gbrain serve` holds. Skip them loudly rather
+# than aborting: `--mcp` re-runs (refresh a token, re-register a server, rewrite
+# a client config) need none of this, and before this guard the whole script
+# died here on `set -e` the moment the server it had just started was up.
+BRAIN_OPEN=yes
+gbrain sources list >/dev/null 2>&1 || BRAIN_OPEN=""
+if [[ -z "$BRAIN_OPEN" ]]; then
+  echo
+  echo "sources/orientation: SKIPPED — the brain is open through a running 'gbrain serve'."
+  echo "  Both write to the PGLite file. If a store or an orientation page is"
+  echo "  missing, stop the server and re-run:  pkill -TERM -f 'gbrain serve'"
+fi
+
 # `default` is federated — every resource searches it without asking. That is
 # the TEAM store: shared findings, conventions, anything meant to be common.
+if [[ -n "$BRAIN_OPEN" ]]; then
 echo
 echo "sources:"
 for s in $STORES; do
@@ -134,6 +149,7 @@ bite you has already bitten someone.
 EOF
   echo "  $s — oriented"
 done
+fi  # BRAIN_OPEN
 
 if [[ "${1:-}" == "--mcp" ]]; then
   echo
