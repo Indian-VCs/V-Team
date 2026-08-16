@@ -17,7 +17,7 @@ Retiring is routine maintenance. It is not a judgement about the resource.
 
 | Trigger | Check |
 |---|---|
-| **No work** | zero dispatches in 4+ weeks (`ledger/runs/`) |
+| **No work** | zero dispatches in 4+ weeks — **currently unmeasurable, see below** |
 | **Absorbed** | a lint rule, type or CI check now covers what it caught — the best possible outcome |
 | **Duplicate** | its capabilities are a subset of another resource's |
 | **Wrong split** | it keeps handing back because the role was mis-scoped, not because it performs badly |
@@ -40,8 +40,30 @@ prompt-engineering version of "try harder."
 
 ## Procedure
 
-1. Check `ledger/runs/` for actual dispatch history. Do not retire on
-   impression.
+1. **The "no work" trigger is suspended. Do not retire on it.**
+
+   It read `ledger/runs/`, which was deleted on 2026-08-16 when the track
+   record became a projection over commit trailers
+   (`ledger/gaps/2026-08-16-trailer-projection-has-no-substrate.md`). A read
+   against the absent directory returns zero dispatches **for every resource**,
+   so the trigger does not merely stop working — it fires *maximally and
+   uniformly*, and every resource on the roster looks retirable. That is the
+   silent-zero defect the same entry condemned in `record.sh:47`, landing in
+   the one path whose output is deleting a resource.
+
+   **`./scripts/record.sh <callsign>` is the nearest replacement and it is not
+   a substitute.** It counts commits that landed, so it can show that a
+   resource *did* work. It cannot show that a resource was *never dispatched*:
+   hand-backs, escalations and dropped dispatches leave no commit, and
+   `ledger/runs/` was the only thing that recorded them. Absence of commits is
+   now consistent with "never asked" and with "asked repeatedly and handed back
+   every time", which are opposite facts about whether to retire.
+
+   So: retire on **Absorbed**, **Duplicate** or **Wrong split**, each of which
+   is judged from artifacts that still exist. Retiring for idleness needs a
+   dispatch record that currently has no substrate. If you believe a resource
+   is idle, that is a `ledger/gaps/` entry, not a retirement.
+
 2. Confirm no other resource depends on it as a `monitoring` party for
    in-flight work.
 3. Delete `resources/<name>.md` and its `registry.yaml` entry.
