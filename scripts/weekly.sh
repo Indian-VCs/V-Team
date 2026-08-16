@@ -37,13 +37,29 @@ e2e=$(gh run list --workflow=e2e.yml --limit 100 --json conclusion,createdAt \
 
 # --- V-Team ------------------------------------------------------------------
 cd "$VT_ROOT"
-learned=$(find ledger/learnings -name '*.md' -newermt "$SINCE" 2>/dev/null | wc -l | tr -d ' ')
-active=$( grep -l '^state:   active'  ledger/learnings/*.md 2>/dev/null | wc -l | tr -d ' ')
-proposed=$(ls ledger/learnings/*.md 2>/dev/null | wc -l | tr -d ' ')
-shares=$( grep -h '^shared_to:' ledger/learnings/*.md 2>/dev/null | grep -v '\[\]' | wc -l | tr -d ' ')
 gaps=$(   ls ledger/gaps/*.md 2>/dev/null | wc -l | tr -d ' ')
 escapes=$(find ledger/escapes -name '*.md' -newermt "$SINCE" 2>/dev/null | wc -l | tr -d ' ')
-conv='n/a'; (( proposed > 0 )) && conv="$(( active * 100 / proposed ))%"
+
+# `proposed` is the corpus, so it doubles as the input check. With no corpus
+# these globs matched nothing and every count is `0` for the same reason the
+# report exists to avoid: nothing was read. Three states, kept distinct —
+# `no data` (nothing to read), `none` (read, no events this week, per the
+# standing "never render this week: 0" rule), or the number.
+proposed=$(ls ledger/learnings/*.md 2>/dev/null | wc -l | tr -d ' ')
+if (( proposed > 0 )); then
+  learned=$(find ledger/learnings -name '*.md' -newermt "$SINCE" 2>/dev/null | wc -l | tr -d ' ')
+  active=$( grep -l '^state:   active'  ledger/learnings/*.md 2>/dev/null | wc -l | tr -d ' ')
+  shares=$( grep -h '^shared_to:' ledger/learnings/*.md 2>/dev/null | grep -v '\[\]' | wc -l | tr -d ' ')
+  conv="$(( active * 100 / proposed ))%"
+  (( learned == 0 )) && learned='none'
+  (( shares  == 0 )) && shares='none'
+  learning_line="- learned this week: $learned · total proposed: $proposed · reached active: $active"
+  shares_line="- cross-resource shares: $shares · open gaps: $gaps"
+else
+  conv='no data'
+  learning_line='- **no data** — `ledger/learnings/` holds no artifacts; learning was not measured this week, which is not the same as nothing being learned'
+  shares_line="- cross-resource shares: no data · open gaps: $gaps"
+fi
 
 # --- liveness: the reason this section exists is the gbrain sync that had
 #     never once succeeded while appearing healthy ------------------------------
@@ -86,9 +102,9 @@ done
   echo '- e2e — manual dispatch only, not in the green bar'
   echo
   echo '## Learning'
-  echo "- learned this week: $learned · total proposed: $proposed · reached active: $active"
+  echo "$learning_line"
   echo "- **conversion: $conv** — the signal. Volume is context only."
-  echo "- cross-resource shares: $shares · open gaps: $gaps"
+  echo "$shares_line"
   echo
   echo '## Liveness'
   printf '%s' "$liveness"

@@ -27,24 +27,48 @@ for r in $(vt_resources); do
   cd "$VT_ROOT"
 
   # --- learning ---------------------------------------------------------------
-  proposed=$(grep -l "^resource: $r\$" ledger/learnings/*.md 2>/dev/null | wc -l | tr -d ' ')
-  active=0; contested=0; retired=0
-  if (( proposed > 0 )); then
-    active=$(   grep -l "^resource: $r\$" ledger/learnings/*.md 2>/dev/null | xargs grep -l '^state:   active'    2>/dev/null | wc -l | tr -d ' ')
-    contested=$(grep -l "^resource: $r\$" ledger/learnings/*.md 2>/dev/null | xargs grep -l '^state:   contested' 2>/dev/null | wc -l | tr -d ' ')
-    retired=$(  grep -l "^resource: $r\$" ledger/learnings/*.md 2>/dev/null | xargs grep -l '^state:   retired'   2>/dev/null | wc -l | tr -d ' ')
+  # Every count below is only meaningful if there was anything to count. A `0`
+  # from an empty or absent `ledger/learnings/` is indistinguishable from a
+  # resource that proposed nothing, and the two are opposite facts. So the
+  # corpus size is measured first, and when it is zero the whole block reads
+  # `no data` -- the word `conv` has always used, not a second convention.
+  corpus=$(ls ledger/learnings/*.md 2>/dev/null | wc -l | tr -d ' ')
+
+  proposed=0; active=0; contested=0; retired=0; adopted=0
+  if (( corpus > 0 )); then
+    proposed=$(grep -l "^resource: $r\$" ledger/learnings/*.md 2>/dev/null | wc -l | tr -d ' ')
+    if (( proposed > 0 )); then
+      active=$(   grep -l "^resource: $r\$" ledger/learnings/*.md 2>/dev/null | xargs grep -l '^state:   active'    2>/dev/null | wc -l | tr -d ' ')
+      contested=$(grep -l "^resource: $r\$" ledger/learnings/*.md 2>/dev/null | xargs grep -l '^state:   contested' 2>/dev/null | wc -l | tr -d ' ')
+      retired=$(  grep -l "^resource: $r\$" ledger/learnings/*.md 2>/dev/null | xargs grep -l '^state:   retired'   2>/dev/null | wc -l | tr -d ' ')
+    fi
+
+    # Influence: learnings this resource authored that ANOTHER adopted. The
+    # depth-to-breadth flow -- a junior teaching the architect -- made countable.
+    adopted=$(grep -l "^resource: $r\$" ledger/learnings/*.md 2>/dev/null \
+              | xargs grep -h '^shared_to:' 2>/dev/null | grep -cv '\[\]' || true)
+    adopted=${adopted:-0}
   fi
   conv='no data'; (( proposed > 0 )) && conv="$(( active * 100 / proposed ))%"
 
-  # Influence: learnings this resource authored that ANOTHER adopted. The
-  # depth-to-breadth flow -- a junior teaching the architect -- made countable.
-  adopted=$(grep -l "^resource: $r\$" ledger/learnings/*.md 2>/dev/null \
-            | xargs grep -h '^shared_to:' 2>/dev/null | grep -cv '\[\]' || true)
-  adopted=${adopted:-0}
+  # With no corpus these are unmeasured, and the table must say so rather than
+  # print a column of zeroes that reads like a record.
+  l_proposed="$proposed"; l_active="$active"; l_contested="$contested"
+  l_retired="$retired";   l_adopted="$adopted"; learning_note=''
+  if (( corpus == 0 )); then
+    l_proposed='no data'; l_active='no data'; l_contested='no data'
+    l_retired='no data';  l_adopted='no data'
+    learning_note='**Not measured.** `ledger/learnings/` holds no artifacts, so
+nothing above was read. These cells are absent input, not a score of zero.'
+  fi
 
   # --- run outcomes -----------------------------------------------------------
-  dispatched=0; complete=0; handed_back=0; escalated=0; dropped=0
+  # The guard was already here; its false branch was silent, which left the
+  # table printing five zeroes for "the run graph does not exist". Say so.
+  dispatched='no data'; complete='no data'; handed_back='no data'
+  escalated='no data';  dropped='no data';  work_note=''
   if compgen -G "ledger/runs/*.jsonl" >/dev/null; then
+    dispatched=0; complete=0; handed_back=0; escalated=0; dropped=0
     for st in dispatched complete handed-back escalated dropped; do
       c=$(cat ledger/runs/*.jsonl 2>/dev/null \
           | jq -r --arg r "$r" --arg s "$st" \
@@ -58,14 +82,28 @@ for r in $(vt_resources); do
         dropped)     dropped=$c ;;
       esac
     done
+  else
+    work_note='**Not measured.** No `ledger/runs/*.jsonl` exists, so no run
+outcome was read. These cells are absent input, not a clean sheet.'
   fi
 
   # --- escapes attributed to this resource -----------------------------------
   # `resource-error` only. A no-gate-coverage escape is not this resource's
   # record -- attributing system failures to a worker is the mistake that makes
   # most performance management useless.
-  own_errors=$(grep -l "^attribution: resource-error" ledger/escapes/*.md 2>/dev/null \
-               | xargs grep -l "^resource: $r\$" 2>/dev/null | wc -l | tr -d ' ')
+  #
+  # This is the number a promotion is argued from, so it is the one absence
+  # must never be allowed to flatter. An empty or absent `ledger/escapes/`
+  # would render "0 escape(s) attributed" -- a spotless record manufactured
+  # out of nothing having been read.
+  if compgen -G "ledger/escapes/*.md" >/dev/null; then
+    own_errors=$(grep -l "^attribution: resource-error" ledger/escapes/*.md 2>/dev/null \
+                 | xargs grep -l "^resource: $r\$" 2>/dev/null | wc -l | tr -d ' ')
+    errors_line="**$own_errors** escape(s) attributed to \`resource-error\`."
+  else
+    errors_line='**Not measured.** `ledger/escapes/` holds no artifacts. This is
+not a clean record, it is an unread one — do not argue a promotion from it.'
+  fi
 
   altitude="$(vt_field "$r" altitude)"; autonomy="$(vt_field "$r" autonomy | sed 's/ *#.*//')"
   beat_age=$(vt_stamp_age_hours "beat-$r")
@@ -90,12 +128,14 @@ Altitude **$altitude** · autonomy **$autonomy** · last beat **$last_beat**
 
 | | |
 |---|---|
-| proposed | $proposed |
-| reached \`active\` | $active |
+| proposed | $l_proposed |
+| reached \`active\` | $l_active |
 | **conversion** | **$conv** |
-| contested | $contested |
-| retired | $retired |
-| adopted by another resource | $adopted |
+| contested | $l_contested |
+| retired | $l_retired |
+| adopted by another resource | $l_adopted |
+
+$learning_note
 
 Conversion is the signal. Volume is context only — a resource measured on
 volume produces volume, and \`active\` requires validation against the repo,
@@ -111,6 +151,8 @@ which no resource can grant itself.
 | escalated | $escalated |
 | **dropped** | **$dropped** |
 
+$work_note
+
 \`dropped\` means dispatched and never returned. It is the failure mode a run
 graph exists to catch, and any non-zero value is a finding rather than a
 statistic.
@@ -121,7 +163,7 @@ lucky or pushing through.
 
 ## Attributed errors
 
-**$own_errors** escape(s) attributed to \`resource-error\`.
+$errors_line
 
 Escapes attributed to *no-gate-coverage*, *ambiguous-brief* or
 *impossible-task* are deliberately excluded. Charging a worker for a system
