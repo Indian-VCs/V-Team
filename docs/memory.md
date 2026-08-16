@@ -53,6 +53,12 @@ An **isolated** gbrain source is only searched when explicitly named via
 `--source`. So a resource physically cannot see another's store during normal
 operation.
 
+That sentence describes the **CLI**, and on the CLI it is weaker than it sounds:
+`--source` scopes a *search*, and a resource that names another store is not
+stopped. Over HTTP MCP — the path resources actually use now — the boundary is
+the token, and it is enforced: naming another source returns `permission_denied`.
+See **Access** below for what each path does and does not guarantee.
+
 ⚠ **The table above is what we intend; `gbrain sources list` says something
 else.** Checked 2026-08-16: only `default` reports `federated`, and the eight
 callsign stores report mode **`unset`**, not `isolated` — `vt_brain_ensure_source()`
@@ -219,30 +225,128 @@ failure the rule-state machine exists to prevent. So:
 
 ## Access
 
-**The CLI is the only path that works. There is no MCP path today.**
+**Resources read the brain over HTTP MCP, against the running server. The CLI is
+the fallback.** This reverses the previous rule, and the reversal is the point:
+a running `gbrain serve` used to be what blocked every resource, and is now the
+access path. CTO ruling, 2026-08-17 — *"use mcp over http"*. A process-lifecycle
+rule ("don't run `serve` while resources work") was considered and rejected.
 
-**MCP — registered, does not connect.** `vteam-brain` is registered (user scope)
-and `claude mcp list` reports it as:
+### Why the previous MCP attempt failed, so it is not repeated
+
+`vteam-brain` was registered as a **stdio** server — `command: gbrain`,
+`args: [serve]`. An MCP server inherits the PATH of the process that spawns it,
+`gbrain` lives in `~/.bun/bin`, and that PATH does not contain it, so the server
+never started. Worse, stdio is the wrong shape regardless: each client spawns
+its *own* `gbrain serve`, every one of them tries to open the same PGLite file,
+and all but the first are refused. Stdio cannot fix a single-writer problem
+because stdio multiplies the writers.
+
+HTTP inverts that. **One** server process owns the file; every client is a
+network client of it.
+
+### The server
+
+```sh
+gbrain serve --http --port 7433 --bind 127.0.0.1 \
+  --token-ttl 31536000 --suppress-bootstrap-token \
+  >> ~/.v-team/logs/serve-http.log 2>&1 &
+```
+
+| | |
+|---|---|
+| MCP endpoint | `http://127.0.0.1:7433/mcp` |
+| Health | `http://127.0.0.1:7433/health` → `{"status":"ok",...}` |
+| Admin | `http://127.0.0.1:7433/admin` |
+
+Bound to loopback deliberately. Auth is OAuth 2.1; an unauthenticated `POST
+/mcp` returns `401 invalid_token`.
+
+### One server registration per resource, because the token *is* the identity
+
+The bearer token carries the resource's identity — its `source_id` and the set
+of sources it may read. So a single shared `vteam-brain` registration would give
+every resource the *same* identity, which is worse than what it replaces. Each
+resource gets its own OAuth client and its own registration:
+
+```sh
+# once per callsign, with `gbrain serve` STOPPED (this writes to the DB)
+gbrain auth register-client "vteam-<callsign>" \
+  --scopes "read" --source "<callsign>" --federated-read "<callsign>,default"
+
+# then, per callsign — user scope, so every project and every dispatched agent sees it
+claude mcp add --transport http --scope user "vteam-brain-<callsign>" \
+  http://127.0.0.1:7433/mcp --header "Authorization: Bearer <that client's token>"
+```
+
+`scripts/setup-brain.sh --mcp` does both, idempotently, for every callsign in
+`registry.yaml`. Tokens land in `~/.v-team/secrets/`, mode `0600`, and are never
+printed or committed.
+
+**Registration must be user scope.** A dispatched resource is a subagent; it
+resolves MCP tools through `ToolSearch` against the servers its *session* loaded
+at start. Project scope keyed to one directory does not reliably reach an agent
+dispatched with a different cwd, and local scope does not survive at all.
+
+**A new registration only takes effect in a NEW session.** Verified 2026-08-17:
+a server added mid-session is `✔ Connected` in `claude mcp list` and still
+completely invisible to an agent dispatched from the session that was already
+running — `ToolSearch` returns *"No matching deferred tools found"*. This is the
+exact difference the stdio attempt died on. After running `setup-brain.sh --mcp`,
+restart the session before believing anything.
+
+### The recipe a resource runs
 
 ```
-vteam-brain: gbrain serve - ✘ Failed to connect — ENOENT: Executable not found in $PATH: "gbrain"
+ToolSearch  select:mcp__vteam-brain-heimdall__whoami,mcp__vteam-brain-heimdall__get_page,mcp__vteam-brain-heimdall__query
+
+mcp__vteam-brain-heimdall__whoami    {}
+mcp__vteam-brain-heimdall__get_page  {"slug":"orientation-notes"}
+mcp__vteam-brain-heimdall__query     {"query":"what has bitten me in src/lib/data"}
 ```
 
-An MCP server inherits the PATH of the process that spawns it, and `gbrain`
-lives in `~/.bun/bin`, which that PATH does not contain. So `mcp__vteam-brain__*`
-resolves to nothing. Neither does `mcp__gbrain__*` — no server by that name is
-registered at all; the personal brain is a *different* server again. Two
-resource definitions declared `mcp__gbrain__query/search/get_page` as their only
-brain access and therefore had none; corrected 2026-08-16, and every resource
-now carries the CLI recipe in a **Memory** section in its own definition.
+Each resource carries this in the **Memory** section of its own definition,
+because an agent loading its own definition reads nothing else.
 
-Fixing the MCP path means putting `gbrain` somewhere the spawning process's PATH
-reaches (an absolute `command`, or a shim in `/usr/local/bin`) — and note that a
-connected MCP server holds the PGLite lock, which is the write problem below.
-Until then, do not declare an MCP tool for this brain.
+### Isolation is now access control, not search scoping — a real upgrade
 
-**CLI** — `PATH` first, always. `~/.bun/bin` is not on the default PATH, so
-without the export every call is `command not found`:
+This is the part most likely to have been lost, and it was not. Verified
+2026-08-17 against the live server with the `samwise` token:
+
+| attempt | result |
+|---|---|
+| `get_page {"slug":"orientation-notes"}` | returns the **`samwise`** page — eight stores hold that slug, the server picks yours |
+| `query {"source_id":"jarvis"}` | **`permission_denied`** — *"source 'jarvis' is outside your granted sources"* |
+| `query {"source_id":"__all__"}` | clamped to the grant — only `samwise` rows come back |
+| `list_pages {"source":"jarvis"}` | `source` is not a parameter; ignored with a warning, returns `samwise` |
+| `put_page` | not in `tools/list` at all, and `insufficient_scope` if called anyway |
+
+`whoami` states the grant explicitly:
+
+```json
+{"scopes":["read"], "source_id":"samwise", "federated_read":["samwise","default"]}
+```
+
+Compare the CLI, where `--source` is *search* scoping and nothing stops a
+resource naming another store. **The MCP path is strictly stronger**: the engine
+now enforces what the independence rule (`docs/protocol.md` §4) previously only
+asked for.
+
+**The one thing that did get weaker: `sources_list` enumerates every source in
+the brain — id, page count — including stores the caller cannot read.** Names
+and volumes leak; content does not. That is a small, real regression against the
+CLI and it is recorded here rather than smoothed over.
+
+**And the guarantee is only as good as the token each resource is handed.** A
+legacy full-access bearer (`~/.v-team/secrets/mcp-token`, scopes `read`+`write`,
+no `source_id`) exists for the write path, and it reads **every** store — checked
+2026-08-17, `query --source_id jarvis` with it returns jarvis's pages. Registering
+*that* token for a resource would collapse isolation completely while looking
+identical in `claude mcp list`. Per-resource clients only; never the shared one.
+
+### Fallback: the CLI
+
+Unchanged, and now explicitly second choice — it opens the PGLite file directly,
+so it fails whenever `serve` is running:
 
 ```sh
 export PATH="$HOME/.bun/bin:$PATH"
@@ -250,67 +354,91 @@ export GBRAIN_HOME="$HOME/.v-team/brain" GBRAIN_NO_RETRY_CONNECT=1
 
 gbrain list   --source heimdall
 gbrain get    orientation-notes --source heimdall
-gbrain search "what has bitten me in src/lib/data" --source heimdall
 gbrain get    <slug> --source default            # the shared team store
 gbrain sources list
 ```
 
-`--source` is the isolation boundary on reads: a resource passes its own
-callsign or `default`, never another's. Verified 2026-08-16 — a `search` with no
-`--source` returns nothing, and `--source bagheera` returns that store's
-`orientation-notes`. Note this is *search* scoping, not access control: nothing
-stops a resource that names another store from reading it.
-
 `scripts/lib.sh` `vt_brain()` / `vt_brain_put()` wrap the same recipe for
 scripts, and are the only sanctioned write path.
 
-## ⚠ PGLite is single-writer — know this before relying on it
+## Failure has to be loud, and by default it is not
 
-The V-Team brain is PGLite, and **PGLite allows one process at a time**. While
-`gbrain serve` holds it for MCP, a CLI write from a scheduled routine will be
-refused, and vice versa. This is already visibly true of the personal brain: a
-CLI `list` returns *"already open through gbrain serve (MCP, PID …)"*.
+Silent degradation is the actual harm. On 2026-08-16 Jarvis ruled on a
+production PR with no memory access at all and only knew because it happened to
+check; Anubis shipped runs whose isolation check had never run. Two distinct
+mechanisms produce that, and they need different countermeasures.
 
-Consequences:
+**1. An unreachable HTTP server is invisible, not noisy.** When the server is
+down its tools are simply *absent* from the agent's surface — `ToolSearch`
+returns "No matching deferred tools found", which reads exactly like a store
+with nothing in it. Confirmed 2026-08-17: the personal brain's `gbrain` server
+is registered at `localhost:7432`, nothing is listening there, and
+`mcp__gbrain__*` does not appear in a dispatched agent's tool list at all — no
+error, no warning, just absence.
 
-- The routines must **degrade gracefully**, not fail silently — a blocked write
-  spools and retries on the next window, and the block shows up in the weekly
-  **Liveness** section.
-- Do not assume a write landed because the command exited.
+So **HTTP MCP does not make failure loud on its own. It changes the shape of the
+silence.** Every resource definition now says, in its own words: if `ToolSearch`
+returns nothing for your server name, you have *not* reached the brain, and you
+must report that rather than answer as though the store were empty. That is a
+procedural guard, not a mechanical one, and it should be read as weaker.
 
-### This is blocking, not theoretical
+A liveness check that *is* mechanical, for scripts:
 
-Registering the `vteam-brain` MCP server made it immediate. Claude Code keeps
-the server connected, `gbrain serve` holds the PGLite lock continuously, and
-**every scheduled CLI write spools instead of landing** — confirmed:
+```sh
+curl -fsS --max-time 3 http://127.0.0.1:7433/health >/dev/null \
+  || { echo "::error::brain unreachable at 127.0.0.1:7433"; exit 1; }
+```
+
+**2. The CLI's lock error was never silent — the callers were.** Checked
+2026-08-17: with `serve` holding the lock, `gbrain sources list` writes its
+message to **stderr** and exits **1**. Anubis's warning said the command
+"returned nothing", and `validate.sh` 4g reported isolation unverified, because
+both piped the command into `awk`/`grep` — and a pipeline reports the exit code
+of the *last* stage, so `gbrain`'s `1` was discarded and an error became an empty
+string. The defect was in the caller, not in `gbrain`. `validate.sh` 4g now
+queries the HTTP server when it is up, and captures the CLI's exit status
+separately when it is not.
+
+## ⚠ PGLite is single-writer — reads are solved, writes are not
+
+The V-Team brain is PGLite, and **PGLite allows one process at a time**. HTTP MCP
+resolves this for **reads**: the server holds the file and every resource is a
+client of it, so a running `serve` no longer locks anyone out.
+
+**It does not resolve writes yet, and nothing here should be read as claiming it
+does.** The scheduled routines in `scripts/lib.sh` (`vt_brain_put`) still shell
+out to the CLI, which still cannot open a file `serve` holds. So with `serve`
+running continuously, every scheduled write still spools:
 
 ```
 brain locked — spooled mimir/record (retries next window)
 ```
 
-`GBRAIN_NO_RETRY_CONNECT=1` is set on every CLI call so a locked brain fails
-fast rather than hanging; without it the routine blocks instead of spooling.
-That makes the failure survivable, not solved: with MCP permanently connected
-the spool never drains.
+`GBRAIN_NO_RETRY_CONNECT=1` makes that fail fast rather than hang. The spool at
+`~/.v-team/spool/` drains only when `serve` is stopped.
 
-**PGLite supports MCP access or scheduled writes. Not both.**
+### What the write path should become
 
-Three ways out, in order of preference:
+The server already owns serialisation, so routing writes through it is the fix
+and it makes writes *safer*, not merely possible:
 
-1. **Migrate to Postgres** — the only configuration where both work.
-   ```sh
-   GBRAIN_HOME=~/.v-team/brain gbrain migrate --to supabase
-   ```
-   Needs Supabase credentials. A `gbrain` Supabase project is referenced in
-   prism-platform's CLAUDE.md, so the target may already exist.
-2. **Drop the MCP registration** — routines own the brain, and it is read from
-   the CLI on demand. Cheapest, but gives up the MCP access that was the point.
-3. **Leave it spooling** — writes accumulate in `~/.v-team/spool/` and land
-   whenever MCP is disconnected. Not a design, just a fact about the current
-   state.
+- `vt_brain_put()` calls `POST /mcp` `put_page` with the **write-scoped** token
+  at `~/.v-team/secrets/mcp-token` (`scopes: ["read","write"]`), keeping the
+  spool as the fallback for when the server is down.
+- **Resources still do not write.** Their tokens are `read` only, `put_page` is
+  not even in their `tools/list`, and that is deliberate: a `record` page a
+  resource can write is a track record it can author about itself, which
+  `docs/memory.md` above spends a whole section refusing. Writing stays with
+  `scripts/`, which writes *about* resources from artifacts they cannot forge.
 
-Until (1) or (2), treat the brain as write-deferred and check
-`~/.v-team/spool/` for anything queued.
+**Not implemented, and not verified.** This change was scoped out of the HTTP-MCP
+read fix: the write token's surface was confirmed (`put_page` present, `write`
+scope granted) but **no live write was executed over HTTP**, because the brain
+has no backups and a failed write experiment is not recoverable. Until it lands,
+treat the brain as write-deferred and check `~/.v-team/spool/`.
+
+Migrating to Postgres (`gbrain migrate --to supabase`) remains the option that
+removes the single-writer constraint entirely, and would make this section moot.
 
 ## Embeddings
 

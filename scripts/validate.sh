@@ -196,23 +196,55 @@ VT_BRAIN_HOME="${VT_BRAIN_HOME:-$HOME/.v-team/brain}"
 # whole check was skipped on the maintainer's own machine (2026-08-16).
 GBRAIN_BIN="$(command -v gbrain 2>/dev/null || true)"
 [[ -z "$GBRAIN_BIN" && -x "$HOME/.bun/bin/gbrain" ]] && GBRAIN_BIN="$HOME/.bun/bin/gbrain"
-if [[ -d "$VT_BRAIN_HOME/.gbrain" && -n "$GBRAIN_BIN" ]]; then
-  srcs=$(GBRAIN_HOME="$VT_BRAIN_HOME" GBRAIN_NO_RETRY_CONNECT=1 "$GBRAIN_BIN" sources list 2>/dev/null \
-         | awk '$1!="SOURCES" && $1!~/^─/ {print $1}')
+#     TWO WAYS TO ASK, because neither works in both states. The CLI opens the
+#     PGLite file directly and is refused while `gbrain serve` holds it; the
+#     HTTP server answers only while that same `serve` is running. So try HTTP
+#     first, fall back to the CLI, and warn only when BOTH are unavailable.
+#
+#     The 2026-08-16 version piped the CLI straight into `awk`. A pipeline
+#     reports the exit status of its LAST stage, so gbrain's `1` was thrown away
+#     and its lock message — which goes to stderr, and was being discarded by
+#     `2>/dev/null` — became an empty string that read as "no sources". That is
+#     precisely the silent degradation this check exists to catch, committed
+#     inside the check itself. Capture status separately, never from a pipeline.
+VT_MCP_PORT="${VT_MCP_PORT:-7433}"
+VT_MCP_TOKEN_FILE="${VT_MCP_TOKEN_FILE:-$HOME/.v-team/secrets/mcp-token}"
+if [[ -d "$VT_BRAIN_HOME/.gbrain" ]]; then
+  srcs=""; how=""
+  # (a) HTTP MCP — works precisely when the CLI cannot.
+  if [[ -s "$VT_MCP_TOKEN_FILE" ]] \
+     && curl -fsS --max-time 3 "http://127.0.0.1:$VT_MCP_PORT/health" >/dev/null 2>&1; then
+    body=$(curl -fsS --max-time 10 -X POST "http://127.0.0.1:$VT_MCP_PORT/mcp" \
+             -H "Authorization: Bearer $(cat "$VT_MCP_TOKEN_FILE")" \
+             -H 'Content-Type: application/json' \
+             -H 'Accept: application/json, text/event-stream' \
+             -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"sources_list","arguments":{}}}' 2>/dev/null) || body=""
+    if [[ -n "$body" ]]; then
+      srcs=$(printf '%s' "$body" | sed 's/^data: //' \
+             | grep -oE '\\"id\\": ?\\"[a-z0-9_-]+\\"' | sed -E 's/.*\\"([a-z0-9_-]+)\\"$/\1/' | sort -u)
+      [[ -n "$srcs" ]] && how="http mcp :$VT_MCP_PORT"
+    fi
+  fi
+  # (b) CLI — works precisely when no server holds the lock.
+  if [[ -z "$srcs" && -n "$GBRAIN_BIN" ]]; then
+    cli_out=$(GBRAIN_HOME="$VT_BRAIN_HOME" GBRAIN_NO_RETRY_CONNECT=1 "$GBRAIN_BIN" sources list 2>/dev/null) && cli_rc=0 || cli_rc=$?
+    if [[ $cli_rc -eq 0 ]]; then
+      srcs=$(printf '%s\n' "$cli_out" | awk '$1!="SOURCES" && $1!~/^─/ {print $1}')
+      how="cli"
+    fi
+  fi
+
   if [[ -n "$srcs" ]]; then
     while read -r cs; do
       [[ -z "$cs" ]] && continue
       lc=$(echo "$cs" | tr '[:upper:]' '[:lower:]')
       echo "$srcs" | grep -qx "$lc" || fail "brain: no isolated source '$lc' — that resource's memory writes fall through to the federated 'default' store (./scripts/setup-brain.sh)"
     done < <(echo "$callsigns")
+    echo "  4g: per-resource brain sources verified via $how"
   else
-    # A brain that exists but will not answer is NOT a pass. PGLite is
-    # single-writer, so a running `gbrain serve` (the MCP server, usually
-    # spawned by an agent harness) holds the lock and the CLI returns nothing.
-    # Until 2026-08-16 that emptiness was indistinguishable from "all sources
-    # present" and the check silently no-opped — which is the same shape of
-    # bug as 4h: a guard that looks green because it never ran.
-    echo "::warning::brain: $VT_BRAIN_HOME/.gbrain exists but 'gbrain sources list' returned nothing (PGLite lock from a running 'gbrain serve'?) — per-resource source isolation was NOT verified this run"
+    # A brain that exists but will not answer is NOT a pass — same shape of bug
+    # as 4h: a guard that looks green because it never ran.
+    echo "::warning::brain: $VT_BRAIN_HOME/.gbrain exists but neither the HTTP MCP server (127.0.0.1:$VT_MCP_PORT) nor the CLI could list sources — per-resource source isolation was NOT verified this run"
   fi
 fi
 

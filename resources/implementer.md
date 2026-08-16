@@ -91,28 +91,56 @@ You have an episodic store in the V-Team brain. Your source id is **`samwise`**;
 `default` is the shared team store. Read it before you start; it is memory, not
 law — rules live in the repo.
 
-**Reach it with Bash. There is no MCP path.** The `vteam-brain` MCP server does
-not connect (`gbrain` is not on the default `PATH`), so any `mcp__gbrain__*` or
-`mcp__vteam-brain__*` tool name resolves to nothing. The binary lives in
-`~/.bun/bin`, which is not exported to you, so the `PATH` line is not optional:
+**Your path is the MCP server `vteam-brain-samwise`**, which talks to the running
+`gbrain serve --http` over HTTP. A `serve` holding the PGLite lock is now how you
+*reach* the brain, not what blocks you. Load the tools first — a dispatched
+agent resolves MCP tools through `ToolSearch`, never from a static list:
+
+```
+ToolSearch  select:mcp__vteam-brain-samwise__whoami,mcp__vteam-brain-samwise__get_page,mcp__vteam-brain-samwise__query,mcp__vteam-brain-samwise__list_pages
+
+mcp__vteam-brain-samwise__list_pages {}                              # what you hold
+mcp__vteam-brain-samwise__get_page   {"slug":"orientation-notes"}    # your ramp notes
+mcp__vteam-brain-samwise__query      {"query":"<terms>"}             # your store + default
+```
+
+**If `ToolSearch` returns nothing for that name you have NOT reached the brain.
+Say so in your report and do not answer as though the store were empty.** This
+is the failure that has to stay loud: an unreachable server is *invisible* — its
+tools are simply absent, which reads exactly like a store with nothing in it.
+"The brain says nothing" and "I could not reach the brain" are different
+sentences and only you can tell them apart. `mcp__vteam-brain-samwise__whoami`
+settles it — it returns your `source_id` and the sources you are granted.
+
+**Isolation is enforced by the server, not by your good manners.** Your token
+grants `read` on `samwise` and `default` and nothing else: naming another
+resource's source returns `permission_denied`, and the `__all__` wildcard is
+clamped to your grant. You still must not go looking — reading another store is
+anchoring, exactly what the independence rule exists to prevent — but the engine
+now backs the rule instead of merely trusting you.
+
+**Fallback, and only when the MCP server is unreachable.** The CLI opens the
+PGLite file directly, so it fails whenever `gbrain serve` is running. `gbrain`
+lives in `~/.bun/bin`, which is not on your `PATH`:
 
 ```sh
 export PATH="$HOME/.bun/bin:$PATH"
 export GBRAIN_HOME="$HOME/.v-team/brain" GBRAIN_NO_RETRY_CONNECT=1
 
-gbrain list   --source samwise                       # what you hold
-gbrain get    orientation-notes --source samwise     # your ramp notes
-gbrain search "<terms>" --source samwise             # your store only
-gbrain get    <slug> --source default            # the shared team store
+gbrain list --source samwise                       # what you hold
+gbrain get  orientation-notes --source samwise     # your ramp notes
+gbrain get  <slug> --source default              # the shared team store
 ```
 
-**`--source` is the isolation boundary. Pass `samwise` or `default`, never another
-resource's id.** Reading another store is anchoring — exactly what the
-independence rule exists to prevent, and the engine will not stop you: isolation
-is search-scoped, not access-controlled.
+A locked brain exits **1** and prints *"already open through `gbrain serve`"* to
+stderr — check the exit code, never `| grep` it away, or a lock becomes an empty
+answer. On this path `--source` is **search-scoped, not access-controlled**:
+nothing stops you naming another resource's store, which is exactly why the MCP
+path is preferred. Never pass another resource's id.
 
-Writing is not yours. `scripts/lib.sh` (`vt_brain_put`) owns that path, and the
-brain is single-writer PGLite — see `docs/memory.md`.
+Writing is not yours on either path. Your token is read-only — `put_page`
+returns `insufficient_scope` — and `scripts/lib.sh` (`vt_brain_put`) owns the
+write path. See `docs/memory.md`.
 
 ## Protocol
 

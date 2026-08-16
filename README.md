@@ -29,10 +29,12 @@ VT_DRY=1 ./scripts/beat.sh               # preview the prompts, call nothing
 ```
 
 Each resource has its **own isolated knowledge store** in a brain separate from
-the personal gbrain — `~/.v-team/brain`, registered over MCP as `vteam-brain`.
-Isolation is enforced by the engine, not by policy: a resource physically
-cannot read another's store, which is what keeps the independence rule real.
-See `docs/memory.md`.
+the personal gbrain — `~/.v-team/brain`, read over HTTP MCP against a running
+`gbrain serve --http` (one registration per callsign, `vteam-brain-<callsign>`).
+Isolation is enforced by the engine, not by policy: each resource's token grants
+`read` on its own store plus the shared `default` and nothing else, so naming
+another resource's source returns `permission_denied`. That is what keeps the
+independence rule real. See `docs/memory.md`.
 
 | Routine | When | Does |
 |---|---|---|
