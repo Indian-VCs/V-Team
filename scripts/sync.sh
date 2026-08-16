@@ -5,8 +5,16 @@
 #   ./scripts/sync.sh ../prism-platform --check    # fail on drift, copy nothing
 #
 # This repo is the source of truth. A product's .claude/agents/ is a mirror —
-# never edit it there; edit here and re-sync. Mirrors the CLAUDE.md/AGENTS.md
-# drift check prism-platform already runs.
+# never edit it there; edit here and re-sync.
+#
+# NOTHING RUNS --check AUTOMATICALLY. This header used to claim it "mirrors the
+# CLAUDE.md/AGENTS.md drift check prism-platform already runs"; it does not.
+# prism-platform's agents-sync workflow compares CLAUDE.md to AGENTS.md and
+# never looks at .claude/agents/, which is not even tracked there. On
+# 2026-08-16 all eight mirrored files were found stale by half a day, missing a
+# whole section. Until a CI job in the product repo runs
+# `sync.sh <repo> --check`, mirror freshness is a habit, not a guard — see
+# ledger/gaps/2026-08-16-callsign-not-on-the-dispatch-surface.md.
 
 set -euo pipefail
 

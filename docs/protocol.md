@@ -101,7 +101,24 @@ goes in the brief as a fact — not as a pointer to where it was said.
 Every unit of work has exactly **one** accountable resource. Never two, never
 zero. Two accountables means nobody is. See `dashboard.md`.
 
-## 7. A resource commit says which resource made it
+## 7. A resource is addressed by callsign — in the trailer, and everywhere else
+
+**The callsign is the unit of address, not just the unit of attribution.** Every
+dispatch brief, every report, every escalation and every commit trailer names
+the resource's **callsign**; the functional id (`implementer`, `architect`) is
+the routing key `/assign` matches on and is not a name. A report that says "the
+implementer found X" is a defect.
+
+This sentence exists because on 2026-08-16 the rule lived only in the router's
+head. All eight callsigns were correct in `registry.yaml` and `README.md`, and
+briefs still used job titles, so the CTO asked *"what's with these names,
+implementer, architect?"* and then *"even HR doesn't have a name?"* — reasonably
+concluding the team had no names at all. `scripts/validate.sh` 4h now forces
+each resource file to carry `You are <callsign>`, so a resource signs by
+callsign even when the brief that dispatched it used the title. The router side
+has no guard and is this rule.
+
+
 
 **The CTO's hand commits carry nothing extra.** A commit a resource makes
 carries a GitHub-native co-author trailer naming the resource, plus the run id

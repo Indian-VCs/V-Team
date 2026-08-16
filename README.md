@@ -83,9 +83,23 @@ without changing anything else.
 | **Cerberus** | `deployment-engineer` | Deployment | Release Marshal | behavior | recommend *(probation)* |
 | **Samwise** | `implementer` | Engineering | Conventions-First | implementation | PR + merge on green |
 
-Callsigns are for talking about the team. `/assign` routes on the functional
-id, because "who covers content auditing" has an answer and "who is Mimir"
-does not.
+**Address a resource by callsign. Route to it by functional id.** `/assign`
+matches a request against `registry.yaml` on the functional id, because "who
+covers content auditing" has an answer and "who is Mimir" does not — but every
+brief, report, escalation and commit trailer names the **callsign**. A report
+that says "the implementer found X" is a defect, not a style choice.
+
+That distinction was written down and still leaked, on 2026-08-16: the CTO asked
+*"what's with these names, implementer, architect?"* and then *"even HR doesn't
+have a name?"*. All eight callsigns were correct in `registry.yaml`, in this
+README and in `docs/delegation.md` — and none of those is a file a dispatcher
+opens. It opens `resources/<name>.md`, whose frontmatter is `name: <job title>`
+and whose `description:` said nothing about the callsign. **A callsign that
+lives only in the registry is not in use.** `validate.sh` 4h now requires each
+resource file to carry its own callsign in the description, under the H1, and
+as `You are <X>`. Nothing was renamed — the audit found zero non-compliant
+names, and the whole defect was a missing path from the registry to the place
+the name gets spoken.
 
 **A callsign is a character, that character is not human, and the name encodes
 the job** — CTO rule, 2026-08-16. The one-clause justification is the test: a
@@ -105,6 +119,17 @@ Six of these were renamed on 2026-08-16. The old callsigns survive in commit
 trailers and merged ledger entries, which are never rewritten — the mapping is
 in `ledger/gaps/2026-08-16-dispatch-has-no-owner.md` and is what makes a commit
 reading `Cerberus` resolvable.
+
+**Two are borderline, and are recorded as such rather than quietly passed.**
+**Samwise** is a hobbit: ruled compliant on the *species* test — a people that
+is not *Homo sapiens* within its own fiction — with Tolkien's *"relatives of
+ours"* noted as the honest counter-argument. **Jarvis** is borderline the other
+way: J.A.R.V.I.S. the system is non-human, Edwin Jarvis the butler is not, and
+the name replaced `Alfred`, another fictional butler. It stands because the
+clause above names the non-human referent unambiguously — which is exactly what
+the one-clause test is for. Full reasoning and the tie-breakers in
+`skills/hire`, "Borderline callsigns"; the audit is
+`ledger/gaps/2026-08-16-callsign-not-on-the-dispatch-surface.md`.
 
 ### Department sizes
 

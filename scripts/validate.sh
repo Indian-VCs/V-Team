@@ -109,6 +109,51 @@ while read -r cs; do
   grep -q "\*\*$cs\*\*" README.md || fail "README.md: callsign '$cs' has no bolded one-clause justification in the name-encoding paragraph (skills/hire, 'The callsign rule')"
 done < <(echo "$callsigns")
 
+# 4h. THE CALLSIGN IS ON THE DISPATCH SURFACE, not just in the registry.
+#     Added 2026-08-16 after the CTO asked "what's with these names,
+#     implementer, architect?" and then "even HR doesn't have a name?". Every
+#     callsign was already correct in registry.yaml, README.md and
+#     docs/delegation.md — and every one of those is a v-team-internal file
+#     that a dispatcher never opens. What a dispatcher opens is
+#     resources/<name>.md (mirrored to a product's .claude/agents/), whose
+#     frontmatter is `name: <job title>` and whose description said nothing
+#     about the callsign. So briefs and CTO reports addressed resources by job
+#     title while the registry looked green. 4f checked that a name was ARGUED;
+#     nothing checked that it was USABLE. This does.
+#
+#     The registry-side half of the rule cannot catch this and never could: the
+#     defect was not a missing callsign, it was a callsign with no path to the
+#     place the name gets spoken.
+while read -r pair; do
+  [[ -z "$pair" ]] && continue
+  r="${pair%%|*}"; cs="${pair##*|}"
+  f="resources/$r.md"
+  [[ -f "$f" ]] || continue
+  desc=$(sed -n '2,/^---$/p' "$f" | grep -m1 '^description: ')
+  # Match against the file with newlines flattened, so a reflowed paragraph
+  # does not fail a check about the words rather than the line breaks.
+  flat=$(tr '\n' ' ' < "$f" | tr -s ' ')
+  grep -qF "$cs" <<<"$desc" \
+    || fail "$f: frontmatter description does not name the callsign '$cs' — the description is what a dispatcher reads when it picks and addresses this resource, so a description without the callsign is how '$r' gets called by job title"
+  grep -qF "Callsign **$cs**" <<<"$flat" \
+    || fail "$f: missing the 'Callsign **$cs** — <one-clause>' line under the H1"
+  grep -qF "You are $cs" <<<"$flat" \
+    || fail "$f: missing 'You are $cs' — the resource has to be told its own name, or it signs its work with the job title it was dispatched as"
+  # The brain source id is the callsign, lowercased. 4g checks the stores that
+  # EXIST, needs a live brain, and degrades to a warning when PGLite is locked.
+  # This checks the string the resource is told to pass, needs nothing, and
+  # always runs — so a rename that forgets the source id fails here even when
+  # 4g cannot run. An unmigrated source does not error at runtime; it silently
+  # writes into the federated `default` store.
+  lc_cs=$(tr '[:upper:]' '[:lower:]' <<<"$cs")
+  grep -qF -- "--source $lc_cs" <<<"$flat" \
+    || fail "$f: does not tell the resource to read '--source $lc_cs' — the brain source id is the callsign lowercased, and a mismatch sends this resource's memory into the federated 'default' store instead of erroring (docs/memory.md)"
+done < <(awk '
+  /^  - name: /     { r=$0; sub(/^  - name: /,"",r); gsub(/[[:space:]]/,"",r) }
+  /^    callsign: / { c=$0; sub(/^    callsign: /,"",c); sub(/#.*/,"",c); gsub(/[[:space:]]/,"",c);
+                      if (r != "") { print r "|" c; r="" } }
+' registry.yaml)
+
 # 4g. Every resource has its OWN isolated brain source. Isolation is supposed to
 #     be mechanical (docs/memory.md), and it silently was not: a gbrain write to
 #     a source that does not exist lands in `default`, which is FEDERATED — so
@@ -116,8 +161,13 @@ done < <(echo "$callsigns")
 #     searches, and overwrote each other. Checked only where the brain actually
 #     exists; CI has no brain and must not fail on its absence.
 VT_BRAIN_HOME="${VT_BRAIN_HOME:-$HOME/.v-team/brain}"
-if [[ -d "$VT_BRAIN_HOME/.gbrain" ]] && command -v gbrain >/dev/null 2>&1; then
-  srcs=$(GBRAIN_HOME="$VT_BRAIN_HOME" GBRAIN_NO_RETRY_CONNECT=1 gbrain sources list 2>/dev/null \
+# `gbrain` lives in ~/.bun/bin, which is not on a non-interactive PATH — every
+# resource definition says so, and this script forgot. Without this line the
+# whole check was skipped on the maintainer's own machine (2026-08-16).
+GBRAIN_BIN="$(command -v gbrain 2>/dev/null || true)"
+[[ -z "$GBRAIN_BIN" && -x "$HOME/.bun/bin/gbrain" ]] && GBRAIN_BIN="$HOME/.bun/bin/gbrain"
+if [[ -d "$VT_BRAIN_HOME/.gbrain" && -n "$GBRAIN_BIN" ]]; then
+  srcs=$(GBRAIN_HOME="$VT_BRAIN_HOME" GBRAIN_NO_RETRY_CONNECT=1 "$GBRAIN_BIN" sources list 2>/dev/null \
          | awk '$1!="SOURCES" && $1!~/^─/ {print $1}')
   if [[ -n "$srcs" ]]; then
     while read -r cs; do
@@ -125,6 +175,14 @@ if [[ -d "$VT_BRAIN_HOME/.gbrain" ]] && command -v gbrain >/dev/null 2>&1; then
       lc=$(echo "$cs" | tr '[:upper:]' '[:lower:]')
       echo "$srcs" | grep -qx "$lc" || fail "brain: no isolated source '$lc' — that resource's memory writes fall through to the federated 'default' store (./scripts/setup-brain.sh)"
     done < <(echo "$callsigns")
+  else
+    # A brain that exists but will not answer is NOT a pass. PGLite is
+    # single-writer, so a running `gbrain serve` (the MCP server, usually
+    # spawned by an agent harness) holds the lock and the CLI returns nothing.
+    # Until 2026-08-16 that emptiness was indistinguishable from "all sources
+    # present" and the check silently no-opped — which is the same shape of
+    # bug as 4h: a guard that looks green because it never ran.
+    echo "::warning::brain: $VT_BRAIN_HOME/.gbrain exists but 'gbrain sources list' returned nothing (PGLite lock from a running 'gbrain serve'?) — per-resource source isolation was NOT verified this run"
   fi
 fi
 
