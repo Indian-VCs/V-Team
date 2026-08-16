@@ -154,6 +154,36 @@ done < <(awk '
                       if (r != "") { print r "|" c; r="" } }
 ' registry.yaml)
 
+# 4i. The retired-callsign alias table stays resolvable. A trailer is never
+#     rewritten, so every retired callsign is permanently in history and
+#     record.sh has to map it to someone. An entry pointing at a resource that
+#     no longer exists resolves to nothing and credits nobody — the silent zero
+#     again, this time aimed at a track record. Also: a retired callsign must
+#     not be reused as an active one, or one name means two resources across
+#     history and no projection can tell them apart.
+ret_pairs=$(awk '
+  /^retired_callsigns:/ { inb=1; next }
+  /^[a-z_]+:/           { inb=0 }
+  inb && /^  - callsign: / { c=$0; sub(/^  - callsign: /,"",c); gsub(/[[:space:]]/,"",c) }
+  inb && /^    resource: /  { r=$0; sub(/^    resource: /,"",r); gsub(/[[:space:]]/,"",r)
+                              if (c != "") { print c "|" r; c="" } }
+' registry.yaml)
+while read -r pair; do
+  [[ -z "$pair" ]] && continue
+  rc="${pair%%|*}"; rr="${pair##*|}"
+  echo "$registered" | grep -qx "$rr" \
+    || fail "registry.yaml: retired callsign '$rc' maps to '$rr', which is not a resource — a trailer carrying '$rc' would resolve to nobody (retired_callsigns maps to a RESOURCE ID, never to another callsign)"
+  grep -qxF "$rc" <<<"$callsigns" \
+    && fail "registry.yaml: '$rc' is listed as retired but is also an active callsign — one name cannot mean two resources across history"
+done < <(echo "$ret_pairs")
+
+# 4j. A misattributed-run entry names a real resource too, for the same reason.
+while read -r ar; do
+  [[ -z "$ar" ]] && continue
+  echo "$registered" | grep -qx "$ar" \
+    || fail "registry.yaml: misattributed_runs names actual_resource '$ar', which is not a resource"
+done < <(grep -E '^    actual_resource: ' registry.yaml | sed 's/.*actual_resource: //; s/#.*//' | tr -d ' ')
+
 # 4g. Every resource has its OWN isolated brain source. Isolation is supposed to
 #     be mechanical (docs/memory.md), and it silently was not: a gbrain write to
 #     a source that does not exist lands in `default`, which is FEDERATED — so

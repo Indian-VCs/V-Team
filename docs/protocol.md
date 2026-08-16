@@ -144,6 +144,33 @@ side of the join.
 **Never a co-author naming Claude, Anthropic, or any model.** Resource
 callsigns only. This is enforced, not trusted.
 
+**Write the trailer from `registry.yaml`, never from memory.** On 2026-08-16 the
+router wrote five commits `Co-authored-by: Neo <neo@indianvcs.com>` from memory;
+`Neo` had been retired the previous day for failing the species test, and
+`check-attribution.sh` returned `ok` on every one of them because it validated
+shape and never asked whether the name was a resource.
+
+**A callsign has three states, not two, and the middle one is the point:**
+
+| trailer names | result |
+|---|---|
+| an **active** callsign | passes |
+| a **retired** callsign | **passes** — legitimate history, resolves via `retired_callsigns` |
+| anything else | **fails** — it resolves to nobody, so the work credits nobody |
+
+A plain roster-membership check would be wrong: it starts failing on true
+history the moment anyone is retired, and six were retired on 2026-08-16.
+**Trailers are never rewritten, so every retired callsign is permanently in the
+record and must stay resolvable.** `registry.yaml` carries `retired_callsigns:`
+mapping each old name to a **resource id** — never to another callsign, which
+would need a migration on the next rename. `scripts/sync.sh` emits both states
+to `<product>/.v-team-callsigns`; a guard that finds no roster file must
+**fail**, never pass.
+
+This alias is what makes *"leave the older commits, don't touch those"*
+survivable: history stays untouched **and** stays attributable. Without it those
+two goals are in direct conflict.
+
 **Trailers, not a subject prefix**, because trailers are queryable:
 
 ```sh
