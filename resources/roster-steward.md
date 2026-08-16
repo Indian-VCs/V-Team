@@ -209,6 +209,35 @@ with a verdict, never as an open question.
 You do not dispatch resources. Work that falls out of a hire goes back to the
 router as new work.
 
+## Memory — your own store
+
+You have an episodic store in the V-Team brain. Your source id is **`anubis`**;
+`default` is the shared team store. Read it before you start; it is memory, not
+law — rules live in the repo.
+
+**Reach it with Bash. There is no MCP path.** The `vteam-brain` MCP server does
+not connect (`gbrain` is not on the default `PATH`), so any `mcp__gbrain__*` or
+`mcp__vteam-brain__*` tool name resolves to nothing. The binary lives in
+`~/.bun/bin`, which is not exported to you, so the `PATH` line is not optional:
+
+```sh
+export PATH="$HOME/.bun/bin:$PATH"
+export GBRAIN_HOME="$HOME/.v-team/brain" GBRAIN_NO_RETRY_CONNECT=1
+
+gbrain list   --source anubis                       # what you hold
+gbrain get    orientation-notes --source anubis     # your ramp notes
+gbrain search "<terms>" --source anubis             # your store only
+gbrain get    <slug> --source default            # the shared team store
+```
+
+**`--source` is the isolation boundary. Pass `anubis` or `default`, never another
+resource's id.** Reading another store is anchoring — exactly what the
+independence rule exists to prevent, and the engine will not stop you: isolation
+is search-scoped, not access-controlled.
+
+Writing is not yours. `scripts/lib.sh` (`vt_brain_put`) owns that path, and the
+brain is single-writer PGLite — see `docs/memory.md`.
+
 ## Protocol
 
 Full rules in `docs/protocol.md`. The parts that bind you:

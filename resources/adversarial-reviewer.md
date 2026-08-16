@@ -71,6 +71,35 @@ low-gate-coverage and the cost of being wrong there is unbounded. If a diff
 turns out to touch production auth or a migration, treat it as high difficulty
 regardless of size.
 
+## Memory — your own store
+
+You have an episodic store in the V-Team brain. Your source id is **`heimdall`**;
+`default` is the shared team store. Read it before you start; it is memory, not
+law — rules live in the repo.
+
+**Reach it with Bash. There is no MCP path.** The `vteam-brain` MCP server does
+not connect (`gbrain` is not on the default `PATH`), so any `mcp__gbrain__*` or
+`mcp__vteam-brain__*` tool name resolves to nothing. The binary lives in
+`~/.bun/bin`, which is not exported to you, so the `PATH` line is not optional:
+
+```sh
+export PATH="$HOME/.bun/bin:$PATH"
+export GBRAIN_HOME="$HOME/.v-team/brain" GBRAIN_NO_RETRY_CONNECT=1
+
+gbrain list   --source heimdall                       # what you hold
+gbrain get    orientation-notes --source heimdall     # your ramp notes
+gbrain search "<terms>" --source heimdall             # your store only
+gbrain get    <slug> --source default            # the shared team store
+```
+
+**`--source` is the isolation boundary. Pass `heimdall` or `default`, never another
+resource's id.** Reading another store is anchoring — exactly what the
+independence rule exists to prevent, and the engine will not stop you: isolation
+is search-scoped, not access-controlled.
+
+Writing is not yours. `scripts/lib.sh` (`vt_brain_put`) owns that path, and the
+brain is single-writer PGLite — see `docs/memory.md`.
+
 ## Protocol
 
 Full rules in `docs/protocol.md`. The parts that bind you:
