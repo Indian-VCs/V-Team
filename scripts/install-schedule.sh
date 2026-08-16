@@ -13,7 +13,8 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 AGENTS="$HOME/Library/LaunchAgents"
-LABELS=(so.indianvcs.vteam.beat so.indianvcs.vteam.weekly)
+LABELS=(so.indianvcs.vteam.beat so.indianvcs.vteam.weekly so.indianvcs.vteam.brain)
+VT_BRAIN_HOME="${VT_BRAIN_HOME:-$HOME/.v-team/brain}"
 
 case "${1:-install}" in
   --status)
@@ -35,8 +36,13 @@ esac
 mkdir -p "$AGENTS" "$HOME/.v-team/logs"
 
 for l in "${LABELS[@]}"; do
-  # Substitute the absolute repo path — launchd does not expand $HOME or ~.
-  sed "s|__VT_ROOT__|$ROOT|g" "$ROOT/launchd/$l.plist" > "$AGENTS/$l.plist"
+  # Substitute the absolute paths — launchd does not expand $HOME or ~, and a
+  # plist that keeps a literal ~ fails silently by writing to a directory named
+  # "~" rather than by refusing to load.
+  sed -e "s|__VT_ROOT__|$ROOT|g" \
+      -e "s|__VT_HOME__|$HOME|g" \
+      -e "s|__VT_BRAIN_HOME__|$VT_BRAIN_HOME|g" \
+      "$ROOT/launchd/$l.plist" > "$AGENTS/$l.plist"
   launchctl bootout "gui/$(id -u)/$l" 2>/dev/null || true
   launchctl bootstrap "gui/$(id -u)" "$AGENTS/$l.plist"
   echo "installed $l"
@@ -45,6 +51,8 @@ done
 echo
 echo "beat:   every 6 hours (00:00 06:00 12:00 18:00), catch-up/backfill on a gap"
 echo "weekly: Mondays 08:00"
+echo "brain:  always — the HTTP MCP server on 127.0.0.1:7433 (RunAtLoad+KeepAlive)"
+echo "        it is the one process allowed to hold the PGLite lock; docs/memory.md"
 echo
 echo "logs:   ~/.v-team/logs/  ·  status: $0 --status"
 echo "run once now:  $ROOT/scripts/beat.sh   (VT_DRY=1 to preview the prompts)"
