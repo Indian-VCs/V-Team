@@ -130,3 +130,37 @@ empty record would have rendered as a *clean* one.
 
 Until 1 and 2 hold, deriving trust from git history on these repos is an
 assertion dressed as a derivation.
+
+---
+
+## Resolution — 2026-08-16, CTO ruling
+
+**Answered, not overruled.** The CTO's ruling, verbatim:
+
+> "I know branch is not protected, and it's okay for now. I'll protect it when
+> needed."
+
+The finding above stands: every fact in the verification table is still true,
+and neither branch is protected as of this entry. What changed is the *claim*.
+The objection was never to the mechanism — it was to shipping a projection that
+"carries the appearance of tamper-evidence with none of the substance." A
+projection that does not make that claim is not the artifact this entry
+refused.
+
+So the projection was built, with the guarantee stated as **trust-based** in
+the artifact's own voice — `scripts/record.sh`'s header and the Track record
+section of `docs/memory.md` — naming what it proves (a commit reachable from
+the default branch today carries this callsign and this run id, and CI rejected
+the malformed ones), what it does not (that the history was not rewritten), and
+the exact condition under which it would become tamper-evidence: force-push
+denied on `main`, and the same on `master` once that repo can have it. Items 1
+and 2 above are unchanged and still open; item 3 is now done under an explicit
+caveat rather than a silent claim.
+
+`ledger/runs/` was removed, the condition in item 3 having been met by a real
+record (`implementer`: 3 commits landed, 2 distinct runs, 1 untraceable). The
+cost is recorded rather than glossed: `dropped`, hand-backs and escalations are
+invisible to git and are no longer counted for anyone.
+
+This entry is **not** rewritten. It is appended to, which is what an
+append-only ledger does with a finding that has been answered.
