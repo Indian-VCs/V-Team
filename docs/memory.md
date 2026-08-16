@@ -127,11 +127,20 @@ reason it re-enters probation.
 ./scripts/record.sh --print      # stdout, write nothing
 ```
 
-Every number is derived from ledger artifacts the resource **cannot write about
+Every number is derived from artifacts the resource **cannot write about
 itself** — the system's own rule applied to the resource's own file. It is
 overwritten on each recompute and must not be hand-edited.
 
-Two judgement calls encoded in it:
+**Work is projected from commit trailers**, as of 2026-08-16. For every repo
+the team ships into — this one, plus each product in `registry.yaml` resolved
+as a sibling checkout — `record.sh` reads `Co-authored-by:` and `V-Team-Run:`
+off non-merge commits reachable from that repo's default branch (taken from
+`origin/HEAD`, never assumed to be `main`; prism-platform is `master`). It
+counts commits landed, distinct runs, and **untraceable** commits — a callsign
+with no run id, which cannot be joined to the brief that asked for it and is a
+defect in the commit rather than a credit to the resource.
+
+Two judgement calls carried over unchanged:
 
 - **Only `resource-error` escapes count against a record.** Escapes attributed
   to *no-gate-coverage*, *ambiguous-brief* or *impossible-task* are excluded.
@@ -139,10 +148,61 @@ Two judgement calls encoded in it:
   management useless.
 - **Hand-backs are not negative.** A resource handing back work above its tier
   is the escalation rule working. One that never hands back is either lucky or
-  pushing through.
+  pushing through. A correct hand-back usually lands no commit, so the
+  projection cannot see it at all — and reads that silence as nothing, never
+  as a mark against anyone.
 
-`dropped` — dispatched and never returned — is a finding, not a statistic. Any
-non-zero value means the run graph caught something the session would have lost.
+Absence still renders `no data`, never `0`. A resource with no trailered commit
+has an **unread** record, not a clean one, and no promotion may be argued from
+it.
+
+### ⚠ This record is trusted, not verified
+
+The projection is derived rather than self-reported, which is the property a
+promotion argument needs. **It is not tamper-evidence, and nothing in this repo
+should be read as claiming otherwise.**
+
+Neither default branch is protected. Checked 2026-08-16: `Indian-VCs/V-Team`
+`main` returns `protected: false` with no rulesets; `Indian-VCs/prism-platform`
+`master` **cannot** be protected today — it is a private repo under a personal
+account on a free plan, where GitHub offers neither branch protection nor
+rulesets at all. Six of eight resources hold `Bash`. Any one of them can
+force-push a rewritten history, and the regenerated `record` page would look
+exactly as it does now.
+
+Stated so a future reader cannot mistake it:
+
+| | |
+|---|---|
+| **Proves** | a commit reachable from the default branch *right now* carries this callsign and this run id, and that prism CI (`attribution.yml`, enforcing since #82) rejected the malformed ones. The resource authored a commit, not a claim about itself, and someone merged it. |
+| **Does not prove** | that the history was not rewritten to add that commit or remove another. There is no append-only property here. A resource can, today, author its own track record. |
+
+So the guarantee is **trust-based**. Cite this page as a shared account of what
+happened; never as evidence against a resource that disputes it.
+
+**The exact condition that would change that:** branch protection enabled on
+`main` with force-push denied, and the same on `master` once prism-platform is
+public or on a plan that offers rulesets. When both are true, this section
+comes out — and not before. The finding that produced it is PR #7; the CTO's
+ruling on 2026-08-16 was *"I know branch is not protected, and it's okay for
+now. I'll protect it when needed."*
+
+### What the projection cannot see
+
+`ledger/runs/*.jsonl` was removed on 2026-08-16 once the projection produced
+real records. Two things went with it, and neither is recoverable from git:
+
+- **`dropped`** — dispatched and never returned. A commit that was never made
+  is indistinguishable from a dispatch that was never made. This was the one
+  thing the run graph caught that trailers cannot, and losing it is a real
+  cost, not a wash.
+- **hand-back and escalation counts**, for the same reason.
+
+The mechanism is not gone: `skills/assign` §7 still appends a run file per
+dispatch and `skills/retire` still reads them, so the directory refills as work
+is dispatched. What was deleted is five backfilled files (`887b9e4`) that
+`record.sh` no longer reads — and git still holds them at `8f2fe26`, so nothing
+is destroyed, only removed from the working tree.
 
 The **monthly** report reads this for autonomy proposals. The weekly does not:
 a week is noise for a trust decision.

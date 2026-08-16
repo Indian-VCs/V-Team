@@ -5,12 +5,50 @@
 #   ./scripts/record.sh heimdall   # one
 #   ./scripts/record.sh --print    # to stdout, write nothing
 #
-# Every number here comes from ledger artifacts a resource CANNOT write about
-# itself. No metric reads a resource's own account of how it did — that is the
-# same rule the whole system runs on, applied to the resource's own file.
+# Every number here comes from artifacts a resource CANNOT write about itself.
+# No metric reads a resource's own account of how it did — that is the same
+# rule the whole system runs on, applied to the resource's own file.
 #
 # This is what the MONTHLY report reads to propose autonomy changes. A week is
 # noise for a trust decision; a month is roughly the right evidence window.
+#
+# ─── What this proves, and what it does not ──────────────────────────────────
+#
+# The work numbers are read from `Co-authored-by:` and `V-Team-Run:` trailers
+# on commits reachable from the default branch of each repo (protocol §7). That
+# makes them derived rather than self-reported, which is the property a
+# promotion argument needs. It does NOT make them tamper-evident, and this
+# script will not pretend otherwise.
+#
+# Neither branch is protected. Checked 2026-08-16: `Indian-VCs/V-Team@main`
+# has `protected: false` and no rulesets; `Indian-VCs/prism-platform@master`
+# CANNOT be protected today at all — it is a private repo under a personal
+# account on a free plan, where GitHub offers neither protection nor rulesets.
+# Six of eight resources hold `Bash`. Any one of them can rewrite this history
+# with a single force-push, and nothing on the rendered page would look
+# different afterwards.
+#
+# So, plainly:
+#
+#   PROVES      that a commit reachable from the default branch RIGHT NOW
+#               carries this callsign and this run id, and that prism CI
+#               (`attribution.yml`, enforcing since #82) rejected the
+#               malformed ones. The resource did not write this sentence
+#               about itself — it wrote a commit, and someone merged it.
+#
+#   DOES NOT    that the history was not rewritten to put a commit there, or
+#   PROVE       to take one out. There is no append-only property in play.
+#               A resource can, today, author its own track record.
+#
+# The guarantee is therefore TRUST-BASED. It is an honest shared account of
+# what happened, not evidence you could hold up against a resource that
+# disputes it. Do not cite this page as proof in a contested case.
+#
+# The exact condition that would make it one: branch protection enabled on
+# `main` with force-push denied, and the same on `master` once that repo is
+# public or on a plan that offers rulesets. Until BOTH are true, this caveat
+# stays and this paragraph is the reason it is here.
+# ─────────────────────────────────────────────────────────────────────────────
 
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
@@ -19,6 +57,31 @@ ONLY="${1:-}"; PRINT=""
 [[ "$ONLY" == "--print" ]] && { PRINT=1; ONLY=""; }
 
 callsign_of() { vt_field "$1" callsign | tr '[:upper:]' '[:lower:]'; }
+
+# --- trailer corpus ----------------------------------------------------------
+# Read once, for every repo the team ships into: this one, plus each product
+# named in registry.yaml resolved as a sibling checkout. A product that is not
+# checked out here is NAMED as unread, never silently counted as zero — the
+# same rule as every other absent input on this page.
+TRAILERS="$(mktemp -t vt-trailers)"; trap 'rm -f "$TRAILERS"' EXIT
+REPOS_READ=(); REPOS_UNREAD=()
+
+_parent="$(dirname "$VT_ROOT")"
+_products="$(grep -m1 '^  products: ' "$VT_ROOT/registry.yaml" \
+             | sed 's/.*\[//; s/\].*//' | tr ',' ' ')"
+for _dir in "$VT_ROOT" $(for _p in $_products; do echo "$_parent/$_p"; done); do
+  _name="$(basename "$_dir")"
+  # The default branch, from the remote's own HEAD — never assumed to be
+  # `main`. It is `master` on prism-platform, and hardcoding either one would
+  # silently read nothing.
+  _ref="$(git -C "$_dir" symbolic-ref -q --short refs/remotes/origin/HEAD 2>/dev/null)"
+  if [[ -z "$_ref" ]]; then REPOS_UNREAD+=("$_name"); continue; fi
+  REPOS_READ+=("$_name")
+  # --no-merges: a merge commit inherits nothing and would double-count.
+  git -C "$_dir" log "$_ref" --no-merges \
+    --format="$_name%x09%h%x09%cs%x09%(trailers:key=Co-authored-by,valueonly,separator=%x2C)%x09%(trailers:key=V-Team-Run,valueonly,separator=%x2C)" \
+    >> "$TRAILERS" 2>/dev/null
+done
 
 for r in $(vt_resources); do
   [[ -n "$ONLY" && "$ONLY" != "$r" && "$ONLY" != "$(callsign_of "$r")" ]] && continue
@@ -62,29 +125,48 @@ for r in $(vt_resources); do
 nothing above was read. These cells are absent input, not a score of zero.'
   fi
 
-  # --- run outcomes -----------------------------------------------------------
-  # The guard was already here; its false branch was silent, which left the
-  # table printing five zeroes for "the run graph does not exist". Say so.
-  dispatched='no data'; complete='no data'; handed_back='no data'
-  escalated='no data';  dropped='no data';  work_note=''
-  if compgen -G "ledger/runs/*.jsonl" >/dev/null; then
-    dispatched=0; complete=0; handed_back=0; escalated=0; dropped=0
-    for st in dispatched complete handed-back escalated dropped; do
-      c=$(cat ledger/runs/*.jsonl 2>/dev/null \
-          | jq -r --arg r "$r" --arg s "$st" \
-              'select(.responsible == $r and .state == $s) | .node' 2>/dev/null \
-          | sort -u | wc -l | tr -d ' ')
-      case "$st" in
-        dispatched)  dispatched=$c ;;
-        complete)    complete=$c ;;
-        handed-back) handed_back=$c ;;
-        escalated)   escalated=$c ;;
-        dropped)     dropped=$c ;;
-      esac
-    done
+  # --- work: what actually landed ---------------------------------------------
+  # Projected from commit trailers, not from run files. A resource cannot write
+  # a merged commit about itself without someone merging it, and prism CI has
+  # rejected malformed attribution since #82.
+  #
+  # Absence rules exactly as elsewhere: a resource with no trailered commit
+  # renders `no data`, never `0`. A clean sheet and an unread one are opposite
+  # facts and must never render the same.
+  landed='no data'; runs='no data'; untraceable='no data'
+  first_seen='no data'; last_seen='no data'; repo_split=''; work_note=''
+
+  _rows="$(awk -F'\t' -v cs="$cs" '
+    {
+      split($4, names, ",")
+      for (i in names) {
+        n = tolower(names[i]); gsub(/^[ \t]+|[ \t]+$/, "", n)
+        if (index(n, cs " <") == 1) { print; next }
+      }
+    }' "$TRAILERS")"
+
+  if [[ -n "$_rows" ]]; then
+    landed=$(printf '%s\n' "$_rows" | wc -l | tr -d ' ')
+    runs=$(printf '%s\n' "$_rows" | awk -F'\t' '$5 != "" {print $5}' | tr ',' '\n' \
+           | sed 's/^ *//; s/ *$//' | grep . | sort -u | wc -l | tr -d ' ')
+    untraceable=$(printf '%s\n' "$_rows" | awk -F'\t' '$5 == "" || $5 ~ /^[ \t]*$/' \
+                  | wc -l | tr -d ' ')
+    first_seen=$(printf '%s\n' "$_rows" | cut -f3 | sort | head -1)
+    last_seen=$( printf '%s\n' "$_rows" | cut -f3 | sort | tail -1)
+    # `bt` because a literal backtick inside $( ) opens a nested substitution.
+    repo_split=$(printf '%s\n' "$_rows" | cut -f1 | sort | uniq -c \
+                 | awk -v bt='`' '{printf "%s%s%s%s %s", (NR>1 ? " · " : ""), bt, $2, bt, $1}')
   else
-    work_note='**Not measured.** No `ledger/runs/*.jsonl` exists, so no run
-outcome was read. These cells are absent input, not a clean sheet.'
+    work_note='**Not measured.** No commit on any read default branch carries a
+`Co-authored-by:` trailer for this callsign. This is absent input, not a record
+of zero work — an unattributed commit is indistinguishable from a hand commit
+by construction (protocol §7), so silence here means nothing was read.'
+  fi
+
+  repos_note="Read: $(printf '%s' "${REPOS_READ[*]:-none}" | tr ' ' ',' | sed 's/,/, /g')."
+  if (( ${#REPOS_UNREAD[@]} > 0 )); then
+    repos_note="$repos_note **Not read: $(printf '%s' "${REPOS_UNREAD[*]}" | tr ' ' ',' | sed 's/,/, /g')** —
+no checkout found, so any work landed there is missing from these counts."
   fi
 
   # --- escapes attributed to this resource -----------------------------------
@@ -118,9 +200,13 @@ tags: [v-team, record, derived]
 
 # Record — $cs (\`$r\`)
 
-Generated $(date -u '+%Y-%m-%d'). **Derived from ledger artifacts. Nothing here
-is self-reported**, and this page is overwritten on every recompute — do not
-edit it by hand.
+Generated $(date -u '+%Y-%m-%d'). **Derived from ledger artifacts and merged
+commit trailers. Nothing here is self-reported**, and this page is overwritten
+on every recompute — do not edit it by hand.
+
+⚠ **Trusted, not verified.** Neither default branch denies force-push, so this
+is an honest account, not tamper-evidence. Read the bottom of this page before
+citing it.
 
 Altitude **$altitude** · autonomy **$autonomy** · last beat **$last_beat**
 
@@ -143,23 +229,41 @@ which no resource can grant itself.
 
 ## Work
 
+Projected from \`Co-authored-by:\` / \`V-Team-Run:\` trailers on non-merge
+commits reachable from the default branch of each repo (protocol §7).
+
 | | |
 |---|---|
-| dispatched | $dispatched |
-| complete | $complete |
-| handed back | $handed_back |
-| escalated | $escalated |
-| **dropped** | **$dropped** |
+| commits landed | $landed |
+| distinct runs | $runs |
+| **untraceable** (no \`V-Team-Run:\`) | **$untraceable** |
+| first landed | $first_seen |
+| most recent | $last_seen |
+| by repo | ${repo_split:-no data} |
+
+$repos_note
 
 $work_note
 
-\`dropped\` means dispatched and never returned. It is the failure mode a run
-graph exists to catch, and any non-zero value is a finding rather than a
-statistic.
+\`untraceable\` is the finding, not the volume. A commit carrying a callsign
+but no run id cannot be joined back to the dispatch that asked for it, so it
+credits a resource for work nobody can trace to a brief. Any non-zero value is
+a defect in the commit, not a compliment to the resource.
 
-Hand-backs are **not** a negative. A resource handing back work above its tier
-is the escalation rule working; a resource that never hands back is either
-lucky or pushing through.
+**What this projection cannot see, and does not count against anyone:**
+
+- **Hand-backs.** A run handed back correctly often lands no commit at all, so
+  it is invisible here. That is not a gap being papered over — hand-backs are
+  **not** a negative. A resource handing back work above its tier is the
+  escalation rule working; one that never hands back is either lucky or
+  pushing through. Nothing in this table should be read as rewarding a
+  resource for pushing through.
+- **Dropped runs** — dispatched and never returned. Git cannot show the
+  absence of a commit that was never asked for versus one that was. This was
+  the one thing the run-file graph could catch that trailers cannot, and it is
+  a real loss; see \`docs/memory.md\`.
+- **Work by a resource that omitted its trailer.** Indistinguishable from a
+  CTO hand commit by construction (protocol §7). Silence is never evidence.
 
 ## Attributed errors
 
@@ -174,6 +278,14 @@ failure is what makes most performance management useless.
 With no history the honest answer is "no data", not a flattering zero. A month
 is the shortest window in which any of this means anything; the weekly report
 does not read this page.
+
+**This record is trusted, not verified.** The Work numbers come from commit
+trailers on branches that are **not protected** — \`main\` is unprotected and
+\`master\` cannot be protected while prism-platform is a private repo on a free
+personal plan. A force-push rewrites the inputs to this page and leaves no trace in
+it. So: cite it as a shared account of what happened, never as proof
+against a resource that disputes it. It becomes proof when force-push is
+denied on both default branches, and not before.
 EOF
 )
 
@@ -181,7 +293,7 @@ EOF
     printf '%s\n\n' "$body"
   else
     printf '%s' "$body" | vt_brain_put "$cs" record \
-      && echo "$cs — record written (conversion $conv, dispatched $dispatched)" \
+      && echo "$cs — record written (conversion $conv, commits landed $landed)" \
       || echo "$cs — spooled (brain locked)"
   fi
 done
