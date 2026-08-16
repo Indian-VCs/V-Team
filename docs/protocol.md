@@ -101,6 +101,27 @@ goes in the brief as a fact — not as a pointer to where it was said.
 Every unit of work has exactly **one** accountable resource. Never two, never
 zero. Two accountables means nobody is. See `dashboard.md`.
 
+**A resource may run as many instances at once as there is work for.** The
+registry describes **roles, not headcount** — three `implementer` runs on three
+disjoint units of work have one accountable *each*, and that is this rule
+satisfied, not bent. Parallel instances are how throughput scales without paying
+the permanent context cost of another registry entry that `/assign` could not
+tell apart from the first. What instances owe is **distinguishability in the
+record**: the `V-Team-Run` id is what separates them, which is one more reason
+§7 requires it.
+
+**But a resource may not gate its own work.** The unit of work "decide whether
+this merges" is a different unit from "build it", and when the same instance
+holds both, its one accountable is also its only reviewer — the exact collapse
+this rule exists to prevent. It is invisible when a role is cloned, because both
+units are logged under the same name.
+
+The test is per **run**, not per role: an `implementer` instance may gate
+another `implementer` instance's PR — different unit, different accountable,
+which is the intended use. What it may not do is gate a PR whose commits carry
+its own callsign **and its own run id**. That is mechanically checkable from
+data the attribution guard already parses, and it needs no new resource.
+
 ## 7. A resource is addressed by callsign — in the trailer, and everywhere else
 
 **The callsign is the unit of address, not just the unit of attribution.** Every

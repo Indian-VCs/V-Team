@@ -102,6 +102,21 @@ either loops or stops early, and both look like completion from outside.
 spawn. One place holds the run graph, or the shared-resource collisions become
 invisible.
 
+**Run as many instances of a role as there is work for — that is staffing, and
+it is correct** (`protocol.md` §6). What you may not do is send the gate for a
+PR back to the instance that authored it. Different run id, or a different
+resource; never the same run reviewing itself. Cloning makes that collapse
+invisible, because both sides of it log under one name.
+
+**Give every instance its own `V-Team-Run` id, and take the trailer from
+`registry.yaml`.** On 2026-08-16 three concurrent `implementer` instances each
+wrote `Co-authored-by: Neo` because all three took it from one brief that had it
+wrong. **Cloning a resource clones whatever you got wrong**, and independence
+(§4) does not help here — it prevents reviewers anchoring on each other, not a
+shared bad input reaching everyone. Hiring a different resource would not have
+caught it either; it would have read the same brief. Only a check against the
+registry catches this, which is why one exists now.
+
 ## Reporting a gap
 
 ```
