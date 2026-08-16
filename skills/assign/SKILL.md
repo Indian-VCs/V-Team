@@ -168,6 +168,14 @@ the hiring signal.
 ./scripts/pending.sh          # exit 0 required before you report up
 ```
 
+**Exit 3 means the check could not run at all**, and as of 2026-08-16 that is
+what it returns: `ledger/runs/` was deleted when the track record became a
+projection over commit trailers, and **commit trailers cannot replace it — a
+dropped handoff produces no commit by definition.** So this done-condition is
+currently *unmeasurable*, and while that is true you **report that fact to the
+CTO in place of the check**. An unrunnable check reported as passing is worse
+than no check. See `ledger/gaps/2026-08-16-runs-deleted-guards-left-pointing.md`.
+
 **You do not report to the CTO while that exits non-zero.** It fails on two
 things and only two:
 

@@ -135,8 +135,11 @@ The format is GitHub's, exactly — `Co-authored-by: Name <email>`, in the
 trailer block after a blank line, one line per co-author. GitHub silently
 ignores a line it cannot parse, so a malformed trailer yields a commit that
 looks attributed and credits nobody. `V-Team-Run` is required on any commit
-that carries a co-author, because that is what joins the commit back to a
-`ledger/runs/` file the worker does not write.
+that carries a co-author. It is what groups the commits of one dispatch
+together — and, until 2026-08-16, what joined them to a `ledger/runs/` file the
+worker did not write. That file no longer exists (see *What this cannot
+enforce* below); the run id is now a grouping key with nothing on the other
+side of the join.
 
 **Never a co-author naming Claude, Anthropic, or any model.** Resource
 callsigns only. This is enforced, not trusted.
@@ -160,11 +163,33 @@ git log --format='%H %(trailers:key=V-Team-Run)' -- src/lib/data/
 Because a hand commit carries nothing, a resource that omits the trailer is
 indistinguishable from the CTO committing by hand, and passes. Absence of a
 trailer stopped being evidence the moment "carries nothing" became the human
-signal. Closing that needs evidence from outside the commit: `record.sh`
-reconciling `ledger/runs/` — written by the router, not the worker — against
-the commits that actually landed on the branch a dispatch produced. Until
-that exists, attribution is reliable for commits that claim it and silent
-about commits that do not.
+signal. So attribution is reliable for commits that claim it and **silent about
+commits that do not**.
+
+**That hole got wider on 2026-08-16, not narrower.** The previous revision of
+this paragraph named the fix: `record.sh` reconciling `ledger/runs/` — written
+by the router, not the worker — against the commits a dispatch actually landed.
+**That reconciliation is no longer possible.** `ledger/runs/` was deleted the
+same day, when the track record became a projection over the trailers
+themselves (`ledger/gaps/2026-08-16-trailer-projection-has-no-substrate.md`,
+CTO-ruled and correct on its own terms). The deletion is not the error; the
+consequence has to be said out loud:
+
+- **Before:** two independent records of the same dispatch — run files the
+  worker could not author, and commits the worker wrote. A commit missing its
+  trailer had something to be missing *from*.
+- **After:** one record, the commits, which is the very thing being checked.
+  The projection derives the record from the trailers, so a commit with no
+  trailer is not merely unattributed — it is **absent from the record
+  entirely**, and nothing remains that could notice the absence.
+
+This is circular by construction and it is the accepted cost of the projection,
+recorded rather than laundered. Closing it now needs a substrate outside the
+commit that nobody has yet built: the router recording what it dispatched, in
+some form the worker cannot write. Until then this section proves that a commit
+claiming a callsign is reachable from the default branch — **and nothing about
+work that left no commit at all**, which includes every hand-back, every
+escalation, and every dispatch that was dropped.
 
 **Dropped from the previous revision, and why.** `V-Team-Resource:` is gone,
 replaced by `Co-authored-by:` — one trailer, GitHub-native, and it renders on

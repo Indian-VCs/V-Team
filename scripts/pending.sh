@@ -68,6 +68,28 @@ import json, os, sys, glob
 root, quiet = sys.argv[1], bool(sys.argv[2])
 files = sorted(glob.glob(os.path.join(root, "ledger", "runs", "*.jsonl")))
 
+# NO SUBSTRATE IS NOT A CLEAN BILL. `ledger/runs/` was deleted on 2026-08-16
+# when the track record became a projection over commit trailers. Read against
+# the absent directory, every bucket below is empty and this script printed
+# "nothing waiting on the router" and exited 0 — a flattering number
+# manufactured from missing input, which is exactly the silent-zero defect
+# ledger/gaps/2026-08-16-trailer-projection-has-no-substrate.md condemned in
+# record.sh. It shipped here on the same day, in a check whose entire job is
+# noticing what went unnoticed.
+#
+# Exit 3, distinct from 0 (clean) and 1 (work waiting), so a caller cannot
+# mistake it for either. The trailers CANNOT replace this input: a dropped
+# handoff produces no commit by definition, so the projection has nothing to
+# see. This check is dormant until something records dispatches again.
+if not files:
+    print("::error::pending: no ledger/runs/*.jsonl — THE DISPATCH RECORD HAS NO SUBSTRATE.")
+    print("  This is not 'nothing is waiting'. It is 'nothing can be seen'.")
+    print("  ledger/runs/ was deleted 2026-08-16 (trailer projection). Commit")
+    print("  trailers cannot replace it: a dropped handoff leaves no commit.")
+    print("  Until dispatches are recorded again, the router's done-condition")
+    print("  in skills/assign §8 is UNCHECKABLE and must be reported as such.")
+    sys.exit(3)
+
 latest, order, children, runs = {}, [], set(), set()
 for path in files:
     with open(path) as fh:
