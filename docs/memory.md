@@ -53,6 +53,17 @@ An **isolated** gbrain source is only searched when explicitly named via
 `--source`. So a resource physically cannot see another's store during normal
 operation.
 
+⚠ **The table above is what we intend; `gbrain sources list` says something
+else.** Checked 2026-08-16: only `default` reports `federated`, and the eight
+callsign stores report mode **`unset`**, not `isolated` — `vt_brain_ensure_source()`
+calls `gbrain sources add <id>` with no mode flag. Behaviour still matches the
+intent on the evidence available (a `search` with no `--source` returns nothing;
+`--source bagheera` returns that store's page), so the guarantee is **observed,
+not declared**. Setting the mode explicitly at creation belongs with the brain
+write path in `scripts/`, which is parked; until then do not read `unset` as
+proof of anything. The three `isolated` sources still listed — `alfred`,
+`hermione`, `neo` — are the pre-rename orphans below, not live seats.
+
 **This list is derived from `registry.yaml`, not maintained by hand.** It was
 hand-maintained until 2026-08-16 and the guarantee above was false for three
 months' worth of hires: a gbrain write to a source that does not exist does not
@@ -148,18 +159,50 @@ failure the rule-state machine exists to prevent. So:
 
 ## Access
 
-**MCP** — registered as `vteam-brain` (user scope), so the tools appear as
-`mcp__vteam-brain__*` alongside the personal `mcp__gbrain__*`. Two brains, two
-tool namespaces, no ambiguity about which one you are writing to.
+**The CLI is the only path that works. There is no MCP path today.**
 
-**CLI** —
+**MCP — registered, does not connect.** `vteam-brain` is registered (user scope)
+and `claude mcp list` reports it as:
+
+```
+vteam-brain: gbrain serve - ✘ Failed to connect — ENOENT: Executable not found in $PATH: "gbrain"
+```
+
+An MCP server inherits the PATH of the process that spawns it, and `gbrain`
+lives in `~/.bun/bin`, which that PATH does not contain. So `mcp__vteam-brain__*`
+resolves to nothing. Neither does `mcp__gbrain__*` — no server by that name is
+registered at all; the personal brain is a *different* server again. Two
+resource definitions declared `mcp__gbrain__query/search/get_page` as their only
+brain access and therefore had none; corrected 2026-08-16, and every resource
+now carries the CLI recipe in a **Memory** section in its own definition.
+
+Fixing the MCP path means putting `gbrain` somewhere the spawning process's PATH
+reaches (an absolute `command`, or a shim in `/usr/local/bin`) — and note that a
+connected MCP server holds the PGLite lock, which is the write problem below.
+Until then, do not declare an MCP tool for this brain.
+
+**CLI** — `PATH` first, always. `~/.bun/bin` is not on the default PATH, so
+without the export every call is `command not found`:
 
 ```sh
-export GBRAIN_HOME=~/.v-team/brain
-GBRAIN_SOURCE=heimdall gbrain query "what has bitten me in src/lib/data"
-GBRAIN_SOURCE=heimdall gbrain put surface-lib-data < note.md
+export PATH="$HOME/.bun/bin:$PATH"
+export GBRAIN_HOME="$HOME/.v-team/brain" GBRAIN_NO_RETRY_CONNECT=1
+
+gbrain list   --source heimdall
+gbrain get    orientation-notes --source heimdall
+gbrain search "what has bitten me in src/lib/data" --source heimdall
+gbrain get    <slug> --source default            # the shared team store
 gbrain sources list
 ```
+
+`--source` is the isolation boundary on reads: a resource passes its own
+callsign or `default`, never another's. Verified 2026-08-16 — a `search` with no
+`--source` returns nothing, and `--source bagheera` returns that store's
+`orientation-notes`. Note this is *search* scoping, not access control: nothing
+stops a resource that names another store from reading it.
+
+`scripts/lib.sh` `vt_brain()` / `vt_brain_put()` wrap the same recipe for
+scripts, and are the only sanctioned write path.
 
 ## ⚠ PGLite is single-writer — know this before relying on it
 

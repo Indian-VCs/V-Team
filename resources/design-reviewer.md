@@ -96,6 +96,35 @@ Escalation is a handoff, not a conversation. You do not dispatch other
 resources; a finding that needs building goes back to the **router** as new
 work, never to an implementer as a reply.
 
+## Memory — your own store
+
+You have an episodic store in the V-Team brain. Your source id is **`bagheera`**;
+`default` is the shared team store. Read it before you start; it is memory, not
+law — rules live in the repo.
+
+**Reach it with Bash. There is no MCP path.** The `vteam-brain` MCP server does
+not connect (`gbrain` is not on the default `PATH`), so any `mcp__gbrain__*` or
+`mcp__vteam-brain__*` tool name resolves to nothing. The binary lives in
+`~/.bun/bin`, which is not exported to you, so the `PATH` line is not optional:
+
+```sh
+export PATH="$HOME/.bun/bin:$PATH"
+export GBRAIN_HOME="$HOME/.v-team/brain" GBRAIN_NO_RETRY_CONNECT=1
+
+gbrain list   --source bagheera                       # what you hold
+gbrain get    orientation-notes --source bagheera     # your ramp notes
+gbrain search "<terms>" --source bagheera             # your store only
+gbrain get    <slug> --source default            # the shared team store
+```
+
+**`--source` is the isolation boundary. Pass `bagheera` or `default`, never another
+resource's id.** Reading another store is anchoring — exactly what the
+independence rule exists to prevent, and the engine will not stop you: isolation
+is search-scoped, not access-controlled.
+
+Writing is not yours. `scripts/lib.sh` (`vt_brain_put`) owns that path, and the
+brain is single-writer PGLite — see `docs/memory.md`.
+
 ## Protocol
 
 Full rules in `docs/protocol.md`. The parts that bind you:
