@@ -331,10 +331,18 @@ resource naming another store. **The MCP path is strictly stronger**: the engine
 now enforces what the independence rule (`docs/protocol.md` §4) previously only
 asked for.
 
-**The one thing that did get weaker: `sources_list` enumerates every source in
-the brain — id, page count — including stores the caller cannot read.** Names
-and volumes leak; content does not. That is a small, real regression against the
-CLI and it is recorded here rather than smoothed over.
+**The standard this has to meet is lower than what it delivers.** CTO ruling,
+2026-08-17: **search-scoped isolation is sufficient.** Access control is not
+required — discipline, plus each resource passing its own `--source`, is
+accepted. So the enforcement above is headroom, not a requirement, and the CLI
+fallback is *not* a downgrade below the bar. Treat this as decided; it is not an
+open risk and does not need re-litigating.
+
+One difference worth knowing rather than worrying about: `sources_list`
+enumerates every source in the brain — id, page count — including stores the
+caller cannot read. Names and volumes are visible; content is not. Under the
+ruling above this is acceptable; it is recorded so nobody rediscovers it and
+mistakes it for a break.
 
 **And the guarantee is only as good as the token each resource is handed.** A
 legacy full-access bearer (`~/.v-team/secrets/mcp-token`, scopes `read`+`write`,
